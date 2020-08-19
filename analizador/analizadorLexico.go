@@ -210,9 +210,10 @@ func Verificar_Tipo(cadenaOrdenada []string) {
 			fmt.Println(yellow + "Palabra reservada a ejecutar: " + magenta + "FDISK" + reset)
 			funciones.FuncionFDISK(cadenaOrdenada)
 		} else if strings.ToLower(mamarre) == "mount" {
-
+			fmt.Println(yellow + "Palabra reservada a ejecutar: " + magenta + "MOUNT" + reset)
+			funciones.FuncionMOUNT(cadenaOrdenada)
 		} else if strings.ToLower(mamarre) == "leer" {
-			metodos.ResumenMBR("/home/javier/Imágenes/MamarreTime/Disco1.dsk")
+			metodos.ResumenMBR("/home/javier/Imágenes/Disco1.dsk")
 		} else if mamarre == "" {
 			SaltoLinea()
 			fmt.Println(red + "NO SE INGRESO NINGUN PARAMETRO" + reset)

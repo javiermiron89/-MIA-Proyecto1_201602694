@@ -262,3 +262,45 @@ func FuncionFDISK(vector []string) {
 		fmt.Println(red + "[ERROR]" + reset + "Los parametros de " + magenta + "FDISK" + reset + " obligatorios no han sido completamente ingresados")
 	}
 }
+
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//MOUNT-----MOUNT-----FUNCIONES-----FUNCIONES-----MOUNT-----MOUNT-----FUNCIONES-----FUNCIONES-----MOUNT-----MOUNT-----FUNCIONES--------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+
+//FuncionMOUNT =
+func FuncionMOUNT(vector []string) {
+	var parametros [2]string //[0]PATH   [1]NAME
+	var vecAuxiliar []string = nil
+	mountVieneSolo := true
+	pathObligatorio := false
+	nameObligatorio := false
+
+	for j := 1; j < len(vector); j++ {
+		vecAuxiliar = strings.SplitN(vector[j], "->", -1)
+		if strings.ToLower(vecAuxiliar[0]) == "-path" {
+			parametros[0] = vecAuxiliar[1]
+			pathObligatorio = true
+			mountVieneSolo = false
+		} else if strings.ToLower(vecAuxiliar[0]) == "-name" {
+			parametros[1] = vecAuxiliar[1]
+			nameObligatorio = true
+			mountVieneSolo = false
+		}
+	}
+
+	if mountVieneSolo == true {
+		fmt.Println("Que uts")
+	} else {
+		if pathObligatorio == true && nameObligatorio == true {
+			metodos.MontarParticion(parametros[0], parametros[1])
+		} else {
+			fmt.Println(red + "[ERROR]" + reset + "Los parametros de " + magenta + "MOUNT" + reset + " obligatorios no han sido completamente ingresados")
+		}
+	}
+}

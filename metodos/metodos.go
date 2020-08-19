@@ -22,6 +22,9 @@ var cyan = "\033[1;36m"
 var white = "\033[1;37m"
 var reset = "\u001B[0m"
 
+//ContenedorMount es la lista de todos los parametros mount
+var ContenedorMount []NodoMontaje
+
 //-------------------------------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------------------------------
@@ -98,6 +101,39 @@ func leerMBR(path string) MBR {
 	return mbr
 }
 
+func leerEBR(path string, start int64) EBR {
+	var ebr EBR
+	file, err := os.OpenFile(path, os.O_RDWR, 0755)
+
+	defer file.Close()
+	if err != nil {
+		fmt.Println(red + "[ERROR]" + reset + "No se ha podido abrir el archivo")
+	}
+
+	var tamanoEnBytes int = int(unsafe.Sizeof(ebr))
+
+	file.Seek(start, 0)
+	data := leerBytes(file, tamanoEnBytes)
+	buffer := bytes.NewBuffer(data)
+	err = binary.Read(buffer, binary.BigEndian, &ebr)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	fmt.Println(magenta + "---------------------------------------------------------------------" + reset)
+	fmt.Println(cyan+"Status: "+reset, ebr.PartStatus)
+	fitP1 := string(ebr.PartFit)
+	fmt.Println(cyan+"Fit: "+reset, fitP1)
+	fmt.Println(cyan+"Start: "+reset, ebr.PartStart)
+	fmt.Println(cyan+"Size: "+reset, ebr.PartSize)
+	fmt.Println(cyan+"Next: "+reset, ebr.PartNext)
+	mamarreP1 := string(ebr.PartName[:])
+	fmt.Println(cyan + "Name: " + reset + mamarreP1)
+	fmt.Println(magenta + "---------------------------------------------------------------------" + reset)
+
+	return ebr
+}
+
 func escribirBytes(file *os.File, bytes []byte) {
 	_, error := file.Write(bytes)
 	if error != nil {
@@ -108,7 +144,6 @@ func escribirBytes(file *os.File, bytes []byte) {
 
 func leerBytes(file *os.File, number int) []byte {
 	bytes := make([]byte, number)
-
 	_, err := file.Read(bytes)
 	if err != nil {
 		fmt.Println(red + " [ERROR DE LECTURA]" + reset)
@@ -127,6 +162,25 @@ func leerBytes(file *os.File, number int) []byte {
 //-------------------------------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------------------------------
+
+//NodoMontaje es el strcut que almacena los discos montados en memoria
+type NodoMontaje struct {
+	ID              string
+	Path            string
+	NombreParticion string
+	Letra           string
+	Numero          int
+}
+
+//EBR es el struct de la particion logica
+type EBR struct {
+	PartStatus byte
+	PartFit    byte
+	PartStart  int64
+	PartSize   int64
+	PartNext   int64
+	PartName   [16]byte
+}
 
 //Partition es el struct que contiene los datos de las particiones
 type Partition struct {
@@ -370,18 +424,20 @@ func CrearParticion(size, unit, path, type2, fit, name string) {
 			}
 
 			//Se hace el calculo del tamaño de la particion a crear
-			if unit == "k" {
+			if unit == "K" {
 				tamanoParticion = tamanoParticion * 1024
-			} else if unit == "m" {
+			} else if unit == "M" {
 				tamanoParticion = tamanoParticion * 1024 * 1024
 			}
 
 			if mbr.MbrPartition1.PartStatus == 1 {
 				//INGRESA SEGUN SEA SU TIPO DE PARTICION
+				esExtendida := false
 				mbr.MbrPartition1.PartStatus = 0
 				if type2 == "P" {
 					mbr.MbrPartition1.PartType = 'P'
 				} else if type2 == "E" {
+					esExtendida = true
 					mbr.MbrPartition1.PartType = 'E'
 				}
 				var conversorFit [1]byte
@@ -410,12 +466,22 @@ func CrearParticion(size, unit, path, type2, fit, name string) {
 
 				ActualizarMBREInsertarParticion(path, &mbr, '1')
 
+				if esExtendida == true {
+					CrearPrimerEBR(path, mbr.MbrPartition1.PartStart)
+					var ebr2 EBR = leerEBR(path, mbr.MbrPartition1.PartStart)
+
+					if ebr2.PartStatus == 1 {
+						fmt.Println("MAMARRRRRRREEEEEEEEEEEEEEEEE")
+					}
+				}
 			} else if mbr.MbrPartition2.PartStatus == 1 {
 				//INGRESA SEGUN SEA SU TIPO DE PARTICION
+				esExtendida := false
 				mbr.MbrPartition2.PartStatus = 0
 				if type2 == "P" {
 					mbr.MbrPartition2.PartType = 'P'
 				} else if type2 == "E" {
+					esExtendida = true
 					mbr.MbrPartition2.PartType = 'E'
 				}
 				var conversorFit [1]byte
@@ -429,12 +495,17 @@ func CrearParticion(size, unit, path, type2, fit, name string) {
 
 				ActualizarMBREInsertarParticion(path, &mbr, '2')
 
+				if esExtendida == true {
+					CrearPrimerEBR(path, mbr.MbrPartition2.PartStart)
+				}
 			} else if mbr.MbrPartition3.PartStatus == 1 {
-				//INGRESA SEGUN SEA SU TIPO DE PARTICION
+				//INGRESA SEGUN SEA SU TIPO DE PARTICION]
+				esExtendida := false
 				mbr.MbrPartition3.PartStatus = 0
 				if type2 == "P" {
 					mbr.MbrPartition3.PartType = 'P'
 				} else if type2 == "E" {
+					esExtendida = true
 					mbr.MbrPartition3.PartType = 'E'
 				}
 				var conversorFit [1]byte
@@ -448,12 +519,17 @@ func CrearParticion(size, unit, path, type2, fit, name string) {
 
 				ActualizarMBREInsertarParticion(path, &mbr, '3')
 
+				if esExtendida == true {
+					CrearPrimerEBR(path, mbr.MbrPartition3.PartStart)
+				}
 			} else if mbr.MbrPartition4.PartStatus == 1 {
 				//INGRESA SEGUN SEA SU TIPO DE PARTICION
+				esExtendida := false
 				mbr.MbrPartition4.PartStatus = 0
 				if type2 == "P" {
 					mbr.MbrPartition4.PartType = 'P'
 				} else if type2 == "E" {
+					esExtendida = true
 					mbr.MbrPartition4.PartType = 'E'
 				}
 				var conversorFit [1]byte
@@ -467,6 +543,9 @@ func CrearParticion(size, unit, path, type2, fit, name string) {
 
 				ActualizarMBREInsertarParticion(path, &mbr, '4')
 
+				if esExtendida == true {
+					CrearPrimerEBR(path, mbr.MbrPartition4.PartStart)
+				}
 			}
 		}
 
@@ -534,6 +613,73 @@ func ActualizarMBREInsertarParticion(path string, mbr *MBR, numero byte) {
 			escribirBytes(file, valorBinario.Bytes())
 		}
 	}
+}
+
+//CrearPrimerEBR = Funcion encargada de crear el 1er EBR
+func CrearPrimerEBR(path string, start int64) {
+	var ebr EBR
+
+	file, err := os.OpenFile(path, os.O_RDWR, 0755)
+	defer file.Close()
+	if err != nil {
+		fmt.Println(red + "[ERROR]" + reset + "No se ha podido abrir el archivo")
+	}
+
+	//fmt.Println(cyan+"tam 1: "+reset, int(unsafe.Sizeof(ebr)))
+
+	ebr.PartStatus = 1
+	ebr.PartStart = start
+
+	file.Seek(start, 0)
+
+	//Se escribe el Struct EBR
+	var binarioEBR bytes.Buffer
+	binary.Write(&binarioEBR, binary.BigEndian, &ebr)
+	escribirBytes(file, binarioEBR.Bytes())
+}
+
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//MOUNT-----MOUNT-----METODOS-----METODOS-----MOUNT-----MOUNT-----METODOS-----METODOS-----MOUNT-----MOUNT-----METODOS-----METODOS------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+
+//MontarParticion = metodo encargada de montar las particiones mediante el comando MOUNT
+func MontarParticion(path, name string) {
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		fmt.Println(red + "[ERROR]" + reset + "El disco a montar en la ruta especificada no existe")
+	} else {
+		if existeNombreParticion(path, name) == false {
+			fmt.Println(red + "[ERROR]" + reset + "El nombre de la particion a montar no existe")
+		} else {
+			var nombreID string
+			nombreID = "vd"
+
+			var nmontaje NodoMontaje
+			nmontaje.ID = nombreID
+			nmontaje.Path = path
+			nmontaje.NombreParticion = name
+			nmontaje.Letra = ""
+			nmontaje.Numero = 0
+		}
+	}
+	//ContenedorMount = append(ContenedorMount, temporal)
+}
+
+func existeNombreParticion(path, name string) bool {
+	var mbr MBR = leerMBR(path)
+	var nombreAByte16 [16]byte
+	copy(nombreAByte16[:], name)
+
+	if nombreAByte16 == mbr.MbrPartition1.PartName || nombreAByte16 == mbr.MbrPartition2.PartName || nombreAByte16 == mbr.MbrPartition3.PartName || nombreAByte16 == mbr.MbrPartition4.PartName {
+		return true
+	}
+
+	return false
 }
 
 //-------------------------------------------------------------------------------------------------------------------------------------------
@@ -622,4 +768,19 @@ func ResumenMBR(path string) {
 	fmt.Println(cyan+"Size: "+reset, mbr.MbrPartition4.PartSize)
 	mamarreP4 := string(mbr.MbrPartition4.PartName[:])
 	fmt.Println(cyan + "Name: " + reset + mamarreP4)
+}
+
+//ResumenParticionesMontadas =
+func ResumenParticionesMontadas() {
+	if len(ContenedorMount) == 0 {
+		fmt.Println(red + "[ERROR]" + reset + "No existen particiones montadas")
+	} else {
+		for i := 0; i < len(ContenedorMount); i++ {
+			fmt.Println(magenta + "---------------------------------------------------------------------" + reset)
+			fmt.Print(magenta + "|                RESUMEN PARTICION MONTADA ")
+			fmt.Print(i)
+			fmt.Println("                        |" + reset)
+			fmt.Println(magenta + "---------------------------------------------------------------------" + reset)
+		}
+	}
 }
