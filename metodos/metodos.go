@@ -656,18 +656,132 @@ func MontarParticion(path, name string) {
 		if existeNombreParticion(path, name) == false {
 			fmt.Println(red + "[ERROR]" + reset + "El nombre de la particion a montar no existe")
 		} else {
-			var nombreID string
-			nombreID = "vd"
+			//************************************************************
+			//Si el arreglo esta vacio agrega el primer valor a esta mamada
+			//************************************************************
+			if len(ContenedorMount) == 0 {
+				nombreID := "vd"
+				nombreID += "a1"
+				var nmontaje NodoMontaje
+				nmontaje.ID = nombreID
+				nmontaje.Path = path
+				nmontaje.NombreParticion = name
+				nmontaje.Letra = "a"
+				nmontaje.Numero = 1
 
-			var nmontaje NodoMontaje
-			nmontaje.ID = nombreID
-			nmontaje.Path = path
-			nmontaje.NombreParticion = name
-			nmontaje.Letra = ""
-			nmontaje.Numero = 0
+				ContenedorMount = append(ContenedorMount, nmontaje)
+			} else {
+				nombreID := "vd"
+				//************************************************************
+				//Verificar si ya existe la letra o cuantas van para una nueva
+				//************************************************************
+				abecedario := [26]string{"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z"}
+				contadorLetrasDiferentes := 0
+				QueLetraAsigno := ""
+				yaEncontre := false
+				yaEstaLaParticionMontada := false
+				for i := 0; i < len(ContenedorMount); i++ {
+					if ContenedorMount[i].Path == path {
+						//************************************************************
+						//Si encuentra que ya existe la particion montada
+						//retorna un mensaje de error
+						//************************************************************
+						var retornarID string
+						for j := 0; j < len(ContenedorMount); j++ {
+							if ContenedorMount[j].Path == path && ContenedorMount[j].NombreParticion == name {
+								yaEstaLaParticionMontada = true
+								retornarID = ContenedorMount[j].ID
+							}
+						}
+						if yaEstaLaParticionMontada == true {
+							yaEncontre = true
+							fmt.Println(red + "[ERROR]" + reset + "La particion indicada ya se encuentra montada con el ID: " + cyan + retornarID + reset)
+						} else {
+							//************************************************************
+							//Entra aca cuando ya existe el path montado, verifica el No.
+							//de particion y lo agrega.
+							//************************************************************
+							nombreID += ContenedorMount[i].Letra //vd'letra'
+							QueLetraAsigno = ContenedorMount[i].Letra
+							var vectorLetras []string
+							for j := 0; j < len(ContenedorMount); j++ {
+								vectorLetras = append(vectorLetras, ContenedorMount[j].Path)
+							}
+							num := contarNumeroMismaParticion(ContenedorMount, path) + 1
+							nombreID += strconv.Itoa(num) //vdx'numero'
+							contadorLetrasDiferentes = num
+							yaEncontre = true
+							break
+						}
+					}
+				}
+				if yaEncontre == false {
+					//************************************************************
+					//Entra aca cuando no existe el path y genera una nueva letra
+					//para estas particiones
+					//************************************************************
+					var vectorLetras []string
+					for i := 0; i < len(ContenedorMount); i++ {
+						vectorLetras = append(vectorLetras, ContenedorMount[i].Path)
+					}
+					contadorLetrasDiferentes = contarCuantasLetras(vectorLetras) //Retorna el numero para el arreglo de letras en uso
+					QueLetraAsigno = abecedario[contadorLetrasDiferentes]
+					nombreID += QueLetraAsigno + "1"
+				}
+
+				if yaEstaLaParticionMontada == false {
+					var nmontaje NodoMontaje
+					nmontaje.ID = nombreID
+					nmontaje.Path = path
+					nmontaje.NombreParticion = name
+					nmontaje.Letra = QueLetraAsigno
+					nmontaje.Numero = contadorLetrasDiferentes
+
+					ContenedorMount = append(ContenedorMount, nmontaje)
+				}
+			}
 		}
 	}
-	//ContenedorMount = append(ContenedorMount, temporal)
+}
+
+//contarCuantasLetras = Recorre el vector de path que recive para verificar cuantas veces se repite la ruta
+//y devuelve un int con la cantidad de veces encontrado
+func contarCuantasLetras(vector []string) int {
+	Total := 0
+	var yaEncontrados []string
+	for i := 0; i < len(vector); i++ {
+		//fmt.Println("ruta: " + vector[i])
+		ya := false
+		for j := 0; j < len(yaEncontrados); j++ {
+			if yaEncontrados[j] == vector[i] {
+				ya = true
+			}
+		}
+		if ya == false {
+			cuantos := 0
+			for j := 0; j < len(vector); j++ {
+				if vector[i] == vector[j] {
+					cuantos++
+					yaEncontrados = append(yaEncontrados, vector[i])
+				}
+			}
+			if cuantos != 0 {
+				Total++
+				//fmt.Println("Total: ", Total)
+			}
+		}
+	}
+	return Total
+}
+
+func contarNumeroMismaParticion(vector []NodoMontaje, path string) int {
+	Total := 0
+	for i := 0; i < len(vector); i++ {
+		if path == vector[i].Path {
+			Total++
+		}
+	}
+	return Total
 }
 
 func existeNombreParticion(path, name string) bool {
@@ -680,6 +794,40 @@ func existeNombreParticion(path, name string) bool {
 	}
 
 	return false
+}
+
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//MOUNT-----MOUNT-----METODOS-----METODOS-----MOUNT-----MOUNT-----METODOS-----METODOS-----MOUNT-----MOUNT-----METODOS-----METODOS------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+
+//DesmontarParticion = funcion encargada de desmontar la particion
+func DesmontarParticion(idParticion string) {
+	fueEncontrado := false
+	for i := 0; i < len(ContenedorMount); i++ {
+		if ContenedorMount[i].ID == idParticion {
+			var nmontaje NodoMontaje
+			//************************************************************
+			//Sustituye el indice deseado para mover el resto de elementos
+			//un espacio hacia la izquierda
+			//************************************************************
+			copy(ContenedorMount[i:], ContenedorMount[i+1:])
+			//Se elimina el ultimo elemento con un NodoMontaje vacio
+			ContenedorMount[len(ContenedorMount)-1] = nmontaje
+			//Trunca el ultimo valor
+			ContenedorMount = ContenedorMount[:len(ContenedorMount)-1]
+			fueEncontrado = true
+			fmt.Println(green + "[EXITO]" + reset + "El id " + cyan + idParticion + reset + " fue desmontado con exito")
+		}
+	}
+	if fueEncontrado == false {
+		fmt.Println(red + "[ERROR]" + reset + "El id " + cyan + idParticion + reset + " no se encuentra montado")
+	}
 }
 
 //-------------------------------------------------------------------------------------------------------------------------------------------
@@ -781,6 +929,11 @@ func ResumenParticionesMontadas() {
 			fmt.Print(i)
 			fmt.Println("                        |" + reset)
 			fmt.Println(magenta + "---------------------------------------------------------------------" + reset)
+			fmt.Println(cyan + "ID: 	" + reset + ContenedorMount[i].ID)
+			fmt.Println(cyan + "PATH: 	" + reset + ContenedorMount[i].Path)
+			fmt.Println(cyan + "NAME: 	" + reset + ContenedorMount[i].NombreParticion)
+			fmt.Println(cyan + "LETRA: 	" + reset + ContenedorMount[i].Letra)
+			fmt.Println(cyan+"NUMERO:"+reset, ContenedorMount[i].Numero)
 		}
 	}
 }

@@ -212,6 +212,9 @@ func Verificar_Tipo(cadenaOrdenada []string) {
 		} else if strings.ToLower(mamarre) == "mount" {
 			fmt.Println(yellow + "Palabra reservada a ejecutar: " + magenta + "MOUNT" + reset)
 			funciones.FuncionMOUNT(cadenaOrdenada)
+		} else if strings.ToLower(mamarre) == "unmount" {
+			fmt.Println(yellow + "Palabra reservada a ejecutar: " + magenta + "UNMOUNT" + reset)
+			funciones.FuncionUNMOUNT(cadenaOrdenada)
 		} else if strings.ToLower(mamarre) == "leer" {
 			metodos.ResumenMBR("/home/javier/Imágenes/Disco1.dsk")
 		} else if mamarre == "" {

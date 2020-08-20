@@ -295,12 +295,51 @@ func FuncionMOUNT(vector []string) {
 	}
 
 	if mountVieneSolo == true {
-		fmt.Println("Que uts")
+		metodos.ResumenParticionesMontadas()
 	} else {
 		if pathObligatorio == true && nameObligatorio == true {
 			metodos.MontarParticion(parametros[0], parametros[1])
+			fmt.Println(green + "[EXITO]" + reset + "La particion " + cyan + parametros[1] + reset + " fue montado con exito")
 		} else {
 			fmt.Println(red + "[ERROR]" + reset + "Los parametros de " + magenta + "MOUNT" + reset + " obligatorios no han sido completamente ingresados")
 		}
+	}
+}
+
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//MOUNT-----MOUNT-----FUNCIONES-----FUNCIONES-----MOUNT-----MOUNT-----FUNCIONES-----FUNCIONES-----MOUNT-----MOUNT-----FUNCIONES--------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+
+//FuncionUNMOUNT =
+func FuncionUNMOUNT(vector []string) {
+	var parametros [2]string //[0]PATH   [1]NAME
+	var listadoDesmontar []string
+	var vecAuxiliar []string = nil
+	idObligatorio := false
+
+	contador := 0
+	for j := 1; j < len(vector); j++ {
+		vecAuxiliar = strings.SplitN(vector[j], "->", -1)
+		vecAuxiliar[0] = vecAuxiliar[0][:len(vecAuxiliar[0])-1]
+		if strings.ToLower(vecAuxiliar[0]) == "-id" {
+			parametros[0] = vecAuxiliar[1]
+			listadoDesmontar = append(listadoDesmontar, parametros[0])
+			idObligatorio = true
+			contador++
+		}
+	}
+
+	if idObligatorio == true {
+		for i := 0; i < len(listadoDesmontar); i++ {
+			metodos.DesmontarParticion(listadoDesmontar[i])
+		}
+	} else {
+
 	}
 }
