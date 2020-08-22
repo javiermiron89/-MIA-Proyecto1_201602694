@@ -110,7 +110,7 @@ func leerEBR(path string, start int64) EBR {
 		fmt.Println(red + "[ERROR]" + reset + "No se ha podido abrir el archivo")
 	}
 
-	var tamanoEnBytes int = int(unsafe.Sizeof(ebr))
+	var tamanoEnBytes int = int(binary.Size(ebr))
 
 	file.Seek(start, 0)
 	data := leerBytes(file, tamanoEnBytes)
@@ -119,18 +119,18 @@ func leerEBR(path string, start int64) EBR {
 	if err != nil {
 		fmt.Println(err)
 	}
-
-	fmt.Println(magenta + "---------------------------------------------------------------------" + reset)
-	fmt.Println(cyan+"Status: "+reset, ebr.PartStatus)
-	fitP1 := string(ebr.PartFit)
-	fmt.Println(cyan+"Fit: "+reset, fitP1)
-	fmt.Println(cyan+"Start: "+reset, ebr.PartStart)
-	fmt.Println(cyan+"Size: "+reset, ebr.PartSize)
-	fmt.Println(cyan+"Next: "+reset, ebr.PartNext)
-	mamarreP1 := string(ebr.PartName[:])
-	fmt.Println(cyan + "Name: " + reset + mamarreP1)
-	fmt.Println(magenta + "---------------------------------------------------------------------" + reset)
-
+	/*
+		fmt.Println(magenta + "---------------------------------------------------------------------" + reset)
+		fmt.Println(cyan+"Status: "+reset, ebr.PartStatus)
+		fitP1 := string(ebr.PartFit)
+		fmt.Println(cyan+"Fit: "+reset, fitP1)
+		fmt.Println(cyan+"Start: "+reset, ebr.PartStart)
+		fmt.Println(cyan+"Size: "+reset, ebr.PartSize)
+		fmt.Println(cyan+"Next: "+reset, ebr.PartNext)
+		mamarreP1 := string(ebr.PartName[:])
+		fmt.Println(cyan + "Name: " + reset + mamarreP1)
+		fmt.Println(magenta + "---------------------------------------------------------------------" + reset)
+	*/
 	return ebr
 }
 
@@ -465,6 +465,7 @@ func CrearParticion(size, unit, path, type2, fit, name string) {
 				*/
 
 				ActualizarMBREInsertarParticion(path, &mbr, '1')
+				fmt.Println(green + "[EXITO]" + reset + "La particion ha sido creada con exito")
 
 				if esExtendida == true {
 					CrearPrimerEBR(path, mbr.MbrPartition1.PartStart)
@@ -494,6 +495,7 @@ func CrearParticion(size, unit, path, type2, fit, name string) {
 				mbr.MbrPartition2.PartName = conversorName
 
 				ActualizarMBREInsertarParticion(path, &mbr, '2')
+				fmt.Println(green + "[EXITO]" + reset + "La particion ha sido creada con exito")
 
 				if esExtendida == true {
 					CrearPrimerEBR(path, mbr.MbrPartition2.PartStart)
@@ -518,6 +520,7 @@ func CrearParticion(size, unit, path, type2, fit, name string) {
 				mbr.MbrPartition3.PartName = conversorName
 
 				ActualizarMBREInsertarParticion(path, &mbr, '3')
+				fmt.Println(green + "[EXITO]" + reset + "La particion ha sido creada con exito")
 
 				if esExtendida == true {
 					CrearPrimerEBR(path, mbr.MbrPartition3.PartStart)
@@ -542,6 +545,7 @@ func CrearParticion(size, unit, path, type2, fit, name string) {
 				mbr.MbrPartition4.PartName = conversorName
 
 				ActualizarMBREInsertarParticion(path, &mbr, '4')
+				fmt.Println(green + "[EXITO]" + reset + "La particion ha sido creada con exito")
 
 				if esExtendida == true {
 					CrearPrimerEBR(path, mbr.MbrPartition4.PartStart)
@@ -559,9 +563,188 @@ func CrearParticion(size, unit, path, type2, fit, name string) {
 	}
 }
 
-//EliminarParticion =
-func EliminarParticion() {
-	fmt.Println("SOY ELIMINAR PARTICION")
+//EliminarParticion = Metodo encargado de eliminar las particiones segun sean requeridas
+func EliminarParticion(path, name, fit string) {
+	var mbr MBR = leerMBR(path)
+	file, err := os.OpenFile(path, os.O_RDWR, 0755)
+	defer file.Close()
+	if err != nil {
+		fmt.Println(red + "[ERROR]" + reset + "No se ha podido abrir el archivo")
+	}
+
+	var nombreAByte16 [16]byte
+	copy(nombreAByte16[:], name)
+	if nombreAByte16 == mbr.MbrPartition1.PartName {
+		if fit == "FAST" {
+			//Se reescribe el Struct MBR
+			mbr.MbrPartition1.PartStatus = 1
+			mbr.MbrPartition1.PartType = 0
+			mbr.MbrPartition1.PartFit = 0
+			mbr.MbrPartition1.PartStart = 0
+			mbr.MbrPartition1.PartSize = 0
+			var reinicio [16]byte
+			mbr.MbrPartition1.PartName = reinicio
+
+			file.Seek(0, 0)
+			//Se reescribe el Struct MBR
+			var binario3 bytes.Buffer
+			binary.Write(&binario3, binary.BigEndian, mbr)
+			escribirBytes(file, binario3.Bytes())
+		} else if fit == "FULL" {
+			//Se reescribe con 0's toda la particion
+			file.Seek(mbr.MbrPartition1.PartStart, 0)
+			for i := 0; i < int(mbr.MbrPartition1.PartSize); i++ {
+				numero := byte(0)
+				var valorBinario bytes.Buffer
+				binary.Write(&valorBinario, binary.BigEndian, &numero)
+				escribirBytes(file, valorBinario.Bytes())
+			}
+
+			//Se reescribe el Struct MBR
+			mbr.MbrPartition1.PartStatus = 1
+			mbr.MbrPartition1.PartType = 0
+			mbr.MbrPartition1.PartFit = 0
+			mbr.MbrPartition1.PartStart = 0
+			mbr.MbrPartition1.PartSize = 0
+			var reinicio [16]byte
+			mbr.MbrPartition1.PartName = reinicio
+
+			file.Seek(0, 0)
+			var binario3 bytes.Buffer
+			binary.Write(&binario3, binary.BigEndian, mbr)
+			escribirBytes(file, binario3.Bytes())
+		} else {
+			fmt.Println(red + "[ERROR]" + reset + "El tipo de formateo no esta r")
+		}
+	} else if nombreAByte16 == mbr.MbrPartition2.PartName {
+		if fit == "FAST" {
+			//Se reescribe el Struct MBR
+			mbr.MbrPartition2.PartStatus = 1
+			mbr.MbrPartition2.PartType = 0
+			mbr.MbrPartition2.PartFit = 0
+			mbr.MbrPartition2.PartStart = 0
+			mbr.MbrPartition2.PartSize = 0
+			var reinicio [16]byte
+			mbr.MbrPartition2.PartName = reinicio
+
+			file.Seek(0, 0)
+			//Se reescribe el Struct MBR
+			var binario3 bytes.Buffer
+			binary.Write(&binario3, binary.BigEndian, mbr)
+			escribirBytes(file, binario3.Bytes())
+		} else if fit == "FULL" {
+			//Se reescribe con 0's toda la particion
+			file.Seek(mbr.MbrPartition2.PartStart, 0)
+			for i := 0; i < int(mbr.MbrPartition2.PartSize); i++ {
+				numero := byte(0)
+				var valorBinario bytes.Buffer
+				binary.Write(&valorBinario, binary.BigEndian, &numero)
+				escribirBytes(file, valorBinario.Bytes())
+			}
+
+			//Se reescribe el Struct MBR
+			mbr.MbrPartition2.PartStatus = 1
+			mbr.MbrPartition2.PartType = 0
+			mbr.MbrPartition2.PartFit = 0
+			mbr.MbrPartition2.PartStart = 0
+			mbr.MbrPartition2.PartSize = 0
+			var reinicio [16]byte
+			mbr.MbrPartition2.PartName = reinicio
+
+			file.Seek(0, 0)
+			var binario3 bytes.Buffer
+			binary.Write(&binario3, binary.BigEndian, mbr)
+			escribirBytes(file, binario3.Bytes())
+		} else {
+			fmt.Println(red + "[ERROR]" + reset + "El tipo de formateo no esta r")
+		}
+	} else if nombreAByte16 == mbr.MbrPartition3.PartName {
+		if fit == "FAST" {
+			//Se reescribe el Struct MBR
+			mbr.MbrPartition3.PartStatus = 1
+			mbr.MbrPartition3.PartType = 0
+			mbr.MbrPartition3.PartFit = 0
+			mbr.MbrPartition3.PartStart = 0
+			mbr.MbrPartition3.PartSize = 0
+			var reinicio [16]byte
+			mbr.MbrPartition3.PartName = reinicio
+
+			file.Seek(0, 0)
+			//Se reescribe el Struct MBR
+			var binario3 bytes.Buffer
+			binary.Write(&binario3, binary.BigEndian, mbr)
+			escribirBytes(file, binario3.Bytes())
+		} else if fit == "FULL" {
+			//Se reescribe con 0's toda la particion
+			file.Seek(mbr.MbrPartition3.PartStart, 0)
+			for i := 0; i < int(mbr.MbrPartition3.PartSize); i++ {
+				numero := byte(0)
+				var valorBinario bytes.Buffer
+				binary.Write(&valorBinario, binary.BigEndian, &numero)
+				escribirBytes(file, valorBinario.Bytes())
+			}
+
+			//Se reescribe el Struct MBR
+			mbr.MbrPartition3.PartStatus = 1
+			mbr.MbrPartition3.PartType = 0
+			mbr.MbrPartition3.PartFit = 0
+			mbr.MbrPartition3.PartStart = 0
+			mbr.MbrPartition3.PartSize = 0
+			var reinicio [16]byte
+			mbr.MbrPartition3.PartName = reinicio
+
+			file.Seek(0, 0)
+			var binario3 bytes.Buffer
+			binary.Write(&binario3, binary.BigEndian, mbr)
+			escribirBytes(file, binario3.Bytes())
+		} else {
+			fmt.Println(red + "[ERROR]" + reset + "El tipo de formateo no esta r")
+		}
+	} else if nombreAByte16 == mbr.MbrPartition4.PartName {
+		if fit == "FAST" {
+			//Se reescribe el Struct MBR
+			mbr.MbrPartition4.PartStatus = 1
+			mbr.MbrPartition4.PartType = 0
+			mbr.MbrPartition4.PartFit = 0
+			mbr.MbrPartition4.PartStart = 0
+			mbr.MbrPartition4.PartSize = 0
+			var reinicio [16]byte
+			mbr.MbrPartition4.PartName = reinicio
+
+			file.Seek(0, 0)
+			//Se reescribe el Struct MBR
+			var binario3 bytes.Buffer
+			binary.Write(&binario3, binary.BigEndian, mbr)
+			escribirBytes(file, binario3.Bytes())
+		} else if fit == "FULL" {
+			//Se reescribe con 0's toda la particion
+			file.Seek(mbr.MbrPartition4.PartStart, 0)
+			for i := 0; i < int(mbr.MbrPartition4.PartSize); i++ {
+				numero := byte(0)
+				var valorBinario bytes.Buffer
+				binary.Write(&valorBinario, binary.BigEndian, &numero)
+				escribirBytes(file, valorBinario.Bytes())
+			}
+
+			//Se reescribe el Struct MBR
+			mbr.MbrPartition4.PartStatus = 1
+			mbr.MbrPartition4.PartType = 0
+			mbr.MbrPartition4.PartFit = 0
+			mbr.MbrPartition4.PartStart = 0
+			mbr.MbrPartition4.PartSize = 0
+			var reinicio [16]byte
+			mbr.MbrPartition4.PartName = reinicio
+
+			file.Seek(0, 0)
+			var binario3 bytes.Buffer
+			binary.Write(&binario3, binary.BigEndian, mbr)
+			escribirBytes(file, binario3.Bytes())
+		} else {
+			fmt.Println(red + "[ERROR]" + reset + "El tipo de formateo no esta r")
+		}
+	} else {
+		fmt.Println(red + "[ERROR]" + reset + "No existe la particion a eliminar")
+	}
 }
 
 //ModificarParticion =
@@ -626,9 +809,11 @@ func CrearPrimerEBR(path string, start int64) {
 	}
 
 	//fmt.Println(cyan+"tam 1: "+reset, int(unsafe.Sizeof(ebr)))
+	fmt.Println(cyan+"tam 1: "+reset, int(binary.Size(ebr)))
 
 	ebr.PartStatus = 1
 	ebr.PartStart = start
+	ebr.PartNext = -1
 
 	file.Seek(start, 0)
 
@@ -636,6 +821,122 @@ func CrearPrimerEBR(path string, start int64) {
 	var binarioEBR bytes.Buffer
 	binary.Write(&binarioEBR, binary.BigEndian, &ebr)
 	escribirBytes(file, binarioEBR.Bytes())
+}
+
+//InsertarParticionLogica = Metodo que se encarga de insertar las particiones logicas
+func InsertarParticionLogica(path, name, size, fit string) {
+	mbr := leerMBR(path)
+	var ebr EBR
+	siExisteExtendida := false
+	var ajuste byte
+
+	if fit == "B" {
+		ajuste = 'B'
+	} else if fit == "F" {
+		ajuste = 'F'
+	} else if fit == "W" {
+		ajuste = 'W'
+	}
+
+	var nombreAByte16 [16]byte
+	copy(nombreAByte16[:], name)
+	if mbr.MbrPartition1.PartType == 'E' {
+		ebr = leerEBR(path, mbr.MbrPartition1.PartStart)
+		siExisteExtendida = true
+	} else if mbr.MbrPartition2.PartType == 'E' {
+		ebr = leerEBR(path, mbr.MbrPartition2.PartStart)
+		siExisteExtendida = true
+	} else if mbr.MbrPartition3.PartType == 'E' {
+		ebr = leerEBR(path, mbr.MbrPartition3.PartStart)
+		siExisteExtendida = true
+	} else if mbr.MbrPartition4.PartType == 'E' {
+		ebr = leerEBR(path, mbr.MbrPartition4.PartStart)
+		siExisteExtendida = true
+	} else {
+		fmt.Println(red + "[ERROR]" + reset + "No existe una particion extendida para insertar los datos")
+	}
+
+	var tamEBR int64 = int64(binary.Size(ebr))
+	var contadorLogica int64 = 0
+	var sumadorStart int64 = ebr.PartStart
+	var ebrAnterior EBR
+	siguienteEBRVacio := false
+	if siExisteExtendida == true {
+		file, err := os.OpenFile(path, os.O_RDWR, 0755)
+		defer file.Close()
+		if err != nil {
+			fmt.Println(red + "[ERROR]" + reset + "No se ha podido abrir el archivo")
+		}
+		for {
+			if ebr.PartStatus == 1 { // Solo sirve para llenar el primer EBR
+				fmt.Println("soy logica libre")
+
+				ebr.PartStatus = 0
+				ebr.PartFit = ajuste
+				ebr.PartStart = sumadorStart
+				sizeConvertido, _ := strconv.ParseInt(size, 10, 64)
+				ebr.PartSize = sizeConvertido
+				ebr.PartNext = -1
+				ebr.PartName = nombreAByte16
+
+				file.Seek(sumadorStart, 0)
+				fmt.Println(cyan+"Sumador: "+reset, sumadorStart)
+				//Se escribe el Struct EBR
+				var binarioEBR bytes.Buffer
+				binary.Write(&binarioEBR, binary.BigEndian, &ebr)
+				escribirBytes(file, binarioEBR.Bytes())
+				break
+			} else if siguienteEBRVacio == true { //
+				fmt.Println("Soy logica nueva")
+
+				file.Seek(sumadorStart, 0)
+				fmt.Println(cyan+"Sumador: "+reset, sumadorStart)
+
+				var ebrTemporal EBR
+				ebrTemporal.PartStatus = 0
+				fmt.Println(cyan+"Ajuste: "+reset, ajuste)
+				ebrTemporal.PartFit = ajuste
+				ebrTemporal.PartStart = sumadorStart
+				sizeConvertido, _ := strconv.ParseInt(size, 10, 64)
+				ebrTemporal.PartSize = sizeConvertido
+				ebrTemporal.PartNext = -1
+				ebrTemporal.PartName = nombreAByte16
+
+				var binarioEBR2 bytes.Buffer
+				binary.Write(&binarioEBR2, binary.BigEndian, &ebrTemporal)
+				escribirBytes(file, binarioEBR2.Bytes())
+
+				file.Seek(ebrAnterior.PartStart, 0)
+				fmt.Println(cyan+"posicion anterior particion logica: "+reset, ebrAnterior.PartStart)
+				ebrAnterior.PartNext = sumadorStart
+				var binarioEBRAnterior bytes.Buffer
+				binary.Write(&binarioEBRAnterior, binary.BigEndian, &ebrAnterior)
+				escribirBytes(file, binarioEBRAnterior.Bytes())
+				break
+			} else { //Recorre los ebr para encontra uno nuevo
+				ebrAnterior = leerEBR(path, sumadorStart)
+
+				sumadorStart += tamEBR + ebr.PartSize
+				contadorLogica++
+
+				if ebrAnterior.PartNext == -1 {
+					siguienteEBRVacio = true
+				} else {
+					//numPartNext := ebrAnterior.PartNext
+					//ebrTransitorio = leerEBR(path, numPartNext)
+					fmt.Println(cyan+"Sumador: "+reset, sumadorStart)
+					file.Seek(sumadorStart, 0)
+				}
+				fmt.Println("soy logica ocupada")
+			}
+		}
+	}
+}
+
+func cuantoEspacioDisponibleHayParaLogica(path, name string, size int64) int64 {
+	var resultado int64
+
+	return resultado
 }
 
 //-------------------------------------------------------------------------------------------------------------------------------------------
@@ -934,6 +1235,85 @@ func ResumenParticionesMontadas() {
 			fmt.Println(cyan + "NAME: 	" + reset + ContenedorMount[i].NombreParticion)
 			fmt.Println(cyan + "LETRA: 	" + reset + ContenedorMount[i].Letra)
 			fmt.Println(cyan+"NUMERO:"+reset, ContenedorMount[i].Numero)
+		}
+	}
+}
+
+//ResumenEBR =
+func ResumenEBR(path, name string) {
+	mbr := leerMBR(path)
+	var ebr EBR
+	siExisteExtendida := false
+
+	var nombreAByte16 [16]byte
+	copy(nombreAByte16[:], name)
+	if mbr.MbrPartition1.PartType == 'E' {
+		ebr = leerEBR(path, mbr.MbrPartition1.PartStart)
+		siExisteExtendida = true
+	} else if mbr.MbrPartition2.PartType == 'E' {
+		ebr = leerEBR(path, mbr.MbrPartition2.PartStart)
+		siExisteExtendida = true
+	} else if mbr.MbrPartition3.PartType == 'E' {
+		ebr = leerEBR(path, mbr.MbrPartition3.PartStart)
+		siExisteExtendida = true
+	} else if mbr.MbrPartition4.PartType == 'E' {
+		ebr = leerEBR(path, mbr.MbrPartition4.PartStart)
+		siExisteExtendida = true
+	} else {
+		fmt.Println(red + "[ERROR]" + reset + "No existe una particion extendida para generar el resumen de particiones logicas")
+	}
+
+	var tamEBR int64 = int64(binary.Size(ebr))
+	var contadorLogica int64 = 1
+	var sumadorStart int64 = ebr.PartStart
+	var ebrAnterior EBR
+	if siExisteExtendida == true {
+		file, err := os.OpenFile(path, os.O_RDWR, 0755)
+		defer file.Close()
+		if err != nil {
+			fmt.Println(red + "[ERROR]" + reset + "No se ha podido abrir el archivo")
+		}
+		for {
+			if contadorLogica == 1 { // Solo sirve para llenar el primer EBR
+				fmt.Println("IF 1")
+				fmt.Println(magenta + "---------------------------------------------------------------------" + reset)
+				fmt.Println(magenta + "|                          RESUMEN LOGICA " + strconv.FormatInt(contadorLogica, 10) + "                         |" + reset)
+				fmt.Println(magenta + "---------------------------------------------------------------------" + reset)
+				fmt.Println(cyan+"Status: "+reset, ebr.PartStatus)
+				FitPL := string(ebr.PartFit)
+				fmt.Println(cyan+"Fit: "+reset, FitPL)
+				fmt.Println(cyan+"Start: "+reset, ebr.PartStart)
+				fmt.Println(cyan+"Size: "+reset, ebr.PartSize)
+				fmt.Println(cyan+"Next: "+reset, ebr.PartNext)
+				mamarreP1 := string(ebr.PartName[:])
+				fmt.Println(cyan + "Name: " + reset + mamarreP1)
+				contadorLogica++
+			} else {
+				ebrAnterior = leerEBR(path, sumadorStart)
+
+				sumadorStart += tamEBR + ebr.PartSize
+
+				if ebrAnterior.PartNext == -1 {
+					fmt.Println("IF 2 EXIT")
+					break
+				} else {
+					fmt.Println("IF 2")
+					ebrAnterior = leerEBR(path, sumadorStart)
+					fmt.Println(magenta + "---------------------------------------------------------------------" + reset)
+					fmt.Println(magenta + "|                          RESUMEN LOGICA " + strconv.FormatInt(contadorLogica, 10) + "                         |" + reset)
+					fmt.Println(magenta + "---------------------------------------------------------------------" + reset)
+					fmt.Println(cyan+"Status: "+reset, ebrAnterior.PartStatus)
+					FitPL := string(ebrAnterior.PartFit)
+					fmt.Println(cyan+"Fit: "+reset, FitPL)
+					fmt.Println(cyan+"Start: "+reset, ebrAnterior.PartStart)
+					fmt.Println(cyan+"Size: "+reset, ebrAnterior.PartSize)
+					fmt.Println(cyan+"Next: "+reset, ebrAnterior.PartNext)
+					mamarreP1 := string(ebrAnterior.PartName[:])
+					fmt.Println(cyan + "Name: " + reset + mamarreP1)
+					file.Seek(sumadorStart, 0)
+				}
+				contadorLogica++
+			}
 		}
 	}
 }

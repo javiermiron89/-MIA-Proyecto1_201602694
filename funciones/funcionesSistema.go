@@ -244,18 +244,23 @@ func FuncionFDISK(vector []string) {
 			parametros[3] = "P"
 		}
 		if fitOpcional == false {
-			parametros[4] = "WF"
+			parametros[4] = "W"
 		}
 		if deleteOpcional == true && addOpcional == true {
 			fmt.Println(red + "[ERROR]" + reset + "Los parametros " + cyan + "[-delete]" + reset + " y " + cyan + "[-add]" + reset + " no son compatibles")
 		} else if deleteOpcional == true && addOpcional == false {
-			metodos.EliminarParticion()
+			metodos.EliminarParticion(parametros[2], parametros[6], parametros[5])
 		} else if deleteOpcional == false && addOpcional == true {
 			metodos.ModificarParticion()
 		} else if deleteOpcional == false && addOpcional == false {
 			//size, unit, path, type2, fit, name string
-			metodos.CrearParticion(parametros[0], parametros[1], parametros[2], parametros[3], parametros[4], parametros[6])
-			fmt.Println(green + "[EXITO]" + reset + "La particion ha sido creada con exito")
+			if parametros[3] == "L" {
+				metodos.InsertarParticionLogica(parametros[2], parametros[6], parametros[0], parametros[4])
+				fmt.Println(red + "****************" + reset)
+				metodos.ResumenEBR(parametros[2], parametros[6])
+			} else {
+				metodos.CrearParticion(parametros[0], parametros[1], parametros[2], parametros[3], parametros[4], parametros[6])
+			}
 		}
 
 	} else {
@@ -310,7 +315,7 @@ func FuncionMOUNT(vector []string) {
 //-------------------------------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------------------------------
-//MOUNT-----MOUNT-----FUNCIONES-----FUNCIONES-----MOUNT-----MOUNT-----FUNCIONES-----FUNCIONES-----MOUNT-----MOUNT-----FUNCIONES--------------
+//UNMOUNT-----UNMOUNT-----FUNCIONES-----FUNCIONES-----UNMOUNT-----UNMOUNT-----FUNCIONES-----FUNCIONES-----UNMOUNT-----UNMOUNT-----FUNCIONES--
 //-------------------------------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------------------------------
