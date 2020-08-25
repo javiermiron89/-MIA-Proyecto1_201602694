@@ -345,6 +345,93 @@ func FuncionUNMOUNT(vector []string) {
 			metodos.DesmontarParticion(listadoDesmontar[i])
 		}
 	} else {
+		fmt.Println(red + "[ERROR]" + reset + "Los parametros de " + magenta + "UNMOUNT" + reset + " obligatorios no han sido completamente ingresados")
+	}
+}
 
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//REP-----REP-----FUNCIONES-----FUNCIONES-----REP-----REP-----FUNCIONES-----FUNCIONES-----REP-----REP-----FUNCIONES-----FUNCIONES-----REP----
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+
+//FuncionREP =
+func FuncionREP(vector []string) {
+	var parametros [4]string //[0]NOMBRE   [1]PATH	[2]ID	[3]RUTA
+	var vecAuxiliar []string = nil
+	nombreObligatorio := false
+	pathObligatorio := false
+	idObligatorio := false
+	rutaOpcional := false
+
+	for j := 1; j < len(vector); j++ {
+		vecAuxiliar = strings.SplitN(vector[j], "->", -1)
+		if strings.ToLower(vecAuxiliar[0]) == "-nombre" {
+			if strings.ToLower(vecAuxiliar[1]) == "mbr" {
+				parametros[0] = "MBR"
+				nombreObligatorio = true
+			} else if strings.ToLower(vecAuxiliar[1]) == "disk" {
+				parametros[0] = "DISK"
+				nombreObligatorio = true
+			} else if strings.ToLower(vecAuxiliar[1]) == "sb" {
+				parametros[0] = "SB"
+				nombreObligatorio = true
+			} else if strings.ToLower(vecAuxiliar[1]) == "bm_arbdir" {
+				parametros[0] = "BM_ARBDIR"
+				nombreObligatorio = true
+			} else if strings.ToLower(vecAuxiliar[1]) == "bm_detdir" {
+				parametros[0] = "BM_DETDIR"
+				nombreObligatorio = true
+			} else if strings.ToLower(vecAuxiliar[1]) == "bm_inode" {
+				parametros[0] = "BM_INODE"
+				nombreObligatorio = true
+			} else if strings.ToLower(vecAuxiliar[1]) == "bm_block" {
+				parametros[0] = "BM_BLOCK"
+				nombreObligatorio = true
+			} else if strings.ToLower(vecAuxiliar[1]) == "bitacora" {
+				parametros[0] = "BITACORA"
+				nombreObligatorio = true
+			} else if strings.ToLower(vecAuxiliar[1]) == "directorio" {
+				parametros[0] = "DIRECTORIO"
+				nombreObligatorio = true
+			} else if strings.ToLower(vecAuxiliar[1]) == "tree_file" {
+				parametros[0] = "TREE_FILE"
+				nombreObligatorio = true
+			} else if strings.ToLower(vecAuxiliar[1]) == "tree_complete" {
+				parametros[0] = "TREE_COMPLETE"
+				nombreObligatorio = true
+			} else if strings.ToLower(vecAuxiliar[1]) == "ls" {
+				parametros[0] = "LS"
+				nombreObligatorio = true
+			} else {
+				fmt.Println(red + "[ERROR]" + reset + "El parametro ingresado no es una opcion valida")
+			}
+		} else if strings.ToLower(vecAuxiliar[0]) == "-path" {
+			parametros[1] = vecAuxiliar[1]
+			pathObligatorio = true
+		} else if strings.ToLower(vecAuxiliar[0]) == "-id" {
+			parametros[2] = vecAuxiliar[1]
+			idObligatorio = true
+		} else if strings.ToLower(vecAuxiliar[0]) == "-RUTA" {
+			parametros[3] = vecAuxiliar[1]
+			rutaOpcional = true
+		}
+
+	}
+
+	//[0]NOMBRE   [1]PATH	[2]ID	[3]RUTA
+	if nombreObligatorio == true && pathObligatorio == true && idObligatorio == true {
+		if rutaOpcional == false {
+
+		}
+		if parametros[0] == "MBR" {
+			metodos.ReporteMBR(parametros[2], parametros[1])
+		}
+	} else {
+		fmt.Println(red + "[ERROR]" + reset + "Los parametros de " + magenta + "REP" + reset + " obligatorios no han sido completamente ingresados")
 	}
 }

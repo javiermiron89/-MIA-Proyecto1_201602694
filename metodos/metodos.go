@@ -4,9 +4,12 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"math/rand"
 	"os"
+	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -295,7 +298,7 @@ func InsertarMBR(size int64, path string) {
 	}
 
 	tiempo := time.Now()
-	formatoTiempo := tiempo.Format("01-02-2006")
+	formatoTiempo := tiempo.Format("01-02-2006 15:04:05")
 	//tiempoTemp := []byte(formatoTiempo)
 	var conversorTiempo [20]byte
 	copy(conversorTiempo[:], formatoTiempo)
@@ -405,6 +408,15 @@ func CrearParticion(size, unit, path, type2, fit, name string) {
 		if nombreAByte16 == mbr.MbrPartition1.PartName || nombreAByte16 == mbr.MbrPartition2.PartName || nombreAByte16 == mbr.MbrPartition3.PartName || nombreAByte16 == mbr.MbrPartition4.PartName {
 			existeNombre = true
 			fmt.Println(red + "[ERROR]" + reset + "Ya existe una particion con este nombre")
+		}
+
+		//Se obtiene el valor total de espacio libre en el disco
+		if tamanoParticion > espacioLibreTotal {
+			fmt.Println("T PARTICION:", tamanoParticion)
+			fmt.Println("T ESPACIO LIBRE:", espacioLibreTotal)
+			fmt.Println(red + "[ERROR]" + reset + "El tamaño de la particion supera el espacio disponible en el disco")
+		} else {
+
 		}
 
 		//Si no existe extendida puede pasar, independientemente de si es Logica, Primario o Extendida
@@ -551,14 +563,6 @@ func CrearParticion(size, unit, path, type2, fit, name string) {
 					CrearPrimerEBR(path, mbr.MbrPartition4.PartStart)
 				}
 			}
-		}
-
-		//Se obtiene el valor total de espacio libre en el disco
-
-		if tamanoParticion > espacioLibreTotal {
-			fmt.Println(red + "[ERROR]" + reset + "El tamaño de la particion supera el espacio disponible en el disco")
-		} else {
-
 		}
 	}
 }
@@ -809,7 +813,7 @@ func CrearPrimerEBR(path string, start int64) {
 	}
 
 	//fmt.Println(cyan+"tam 1: "+reset, int(unsafe.Sizeof(ebr)))
-	fmt.Println(cyan+"tam 1: "+reset, int(binary.Size(ebr)))
+	//fmt.Println(cyan+"tam 1: "+reset, int(binary.Size(ebr)))
 
 	ebr.PartStatus = 1
 	ebr.PartStart = start
@@ -1316,4 +1320,198 @@ func ResumenEBR(path, name string) {
 			}
 		}
 	}
+}
+
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//REPORTE-----REPORTE-----REPORTE-----REPORTE-----REPORTE-----REPORTE-----REPORTE-----REPORTE-----REPORTE-----REPORTE-----REPORTE-----REPORTE
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+
+//ReporteMBR = Metodo que genera el reporte mediante la funcion REP del MBR
+func ReporteMBR(id, path string) {
+	if len(ContenedorMount) == 0 {
+		fmt.Println(red + "[ERROR]" + reset + "No existen particiones montadas")
+	} else {
+		ExisteID := false
+		var cadenaReporteMBR string
+		for i := 0; i < len(ContenedorMount); i++ {
+			if ContenedorMount[i].ID == id {
+				//******************************************************************
+				//Se llena la cadena que sera ingresada en el .svg para uso de
+				//Graphviz
+				//******************************************************************
+				mbr := leerMBR(ContenedorMount[i].Path)
+				cadenaReporteMBR = "digraph MBR {\nnode [shape=plaintext]\nA [label=<\n<TABLE BORDER=\"0\" CELLBORDER=\"1\" CELLSPACING=\"0\">\n"
+				cadenaReporteMBR += "<TR>\n<TD BGCOLOR=\"#fa4251\" COLSPAN=\"2\">REPORTE MBR</TD>\n</TR>\n"
+				cadenaReporteMBR += "<TR>\n<TD BGCOLOR=\"#ff6363\">NOMBRE</TD><TD BGCOLOR=\"#ff6363\">VALOR</TD>\n</TR>\n"
+				cadenaReporteMBR += "<TR>\n<TD>MBR_Tamaño</TD><TD>" + strconv.FormatInt(mbr.MbrTamano, 10) + "</TD>\n</TR>\n"
+				fechaConvertida := string(mbr.MbrFechaCreacion[:19])
+				cadenaReporteMBR += "<TR>\n<TD>MBR_Fecha_Creacion</TD><TD>" + fechaConvertida + "</TD>\n</TR>\n"
+				cadenaReporteMBR += "<TR>\n<TD>MBR_Disk_Signature</TD><TD>" + strconv.FormatInt(mbr.MbrDiskSignature, 10) + "</TD>\n</TR>\n"
+				//******************************************************************
+				//PARTICION 1
+				//******************************************************************
+				cadenaReporteMBR += "<TR>\n<TD BGCOLOR=\"#FF8585\" COLSPAN=\"2\">PARTICION 1</TD>\n</TR>\n"
+				if mbr.MbrPartition1.PartStatus == 1 {
+					cadenaReporteMBR += "<TR>\n<TD>Part_Status</TD><TD>1</TD>\n</TR>\n"
+				} else {
+					cadenaReporteMBR += "<TR>\n<TD>Part_Status</TD><TD>0</TD>\n</TR>\n"
+					typeP1 := string(mbr.MbrPartition1.PartType)
+					cadenaReporteMBR += "<TR>\n<TD>Part_Type</TD><TD>" + typeP1 + "</TD>\n</TR>\n"
+					fitP1 := string(mbr.MbrPartition1.PartFit)
+					cadenaReporteMBR += "<TR>\n<TD>Part_Fit</TD><TD>" + fitP1 + "</TD>\n</TR>\n"
+					cadenaReporteMBR += "<TR>\n<TD>Part_Start</TD><TD>" + strconv.FormatInt(mbr.MbrPartition1.PartStart, 10) + "</TD>\n</TR>\n"
+					cadenaReporteMBR += "<TR>\n<TD>Part_Size</TD><TD>" + strconv.FormatInt(mbr.MbrPartition1.PartSize, 10) + "</TD>\n</TR>\n"
+					var nombreP1 string
+					for i1, valor1 := range mbr.MbrPartition1.PartName {
+						if mbr.MbrPartition1.PartName[i1] != 0 {
+							nombreP1 += string(valor1)
+						}
+					}
+					cadenaReporteMBR += "<TR>\n<TD>Part_Name</TD><TD>" + nombreP1 + "</TD>\n</TR>\n"
+				}
+				//******************************************************************
+				//PARTICION 2
+				//******************************************************************
+				cadenaReporteMBR += "<TR>\n<TD BGCOLOR=\"#FF8585\" COLSPAN=\"2\">PARTICION 2</TD>\n</TR>\n"
+				if mbr.MbrPartition2.PartStatus == 1 {
+					cadenaReporteMBR += "<TR>\n<TD>Part_Status</TD><TD>1</TD>\n</TR>\n"
+				} else {
+					cadenaReporteMBR += "<TR>\n<TD>Part_Status</TD><TD>0</TD>\n</TR>\n"
+					typeP2 := string(mbr.MbrPartition2.PartType)
+					cadenaReporteMBR += "<TR>\n<TD>Part_Type</TD><TD>" + typeP2 + "</TD>\n</TR>\n"
+					fitP2 := string(mbr.MbrPartition2.PartFit)
+					cadenaReporteMBR += "<TR>\n<TD>Part_Fit</TD><TD>" + fitP2 + "</TD>\n</TR>\n"
+					cadenaReporteMBR += "<TR>\n<TD>Part_Start</TD><TD>" + strconv.FormatInt(mbr.MbrPartition2.PartStart, 10) + "</TD>\n</TR>\n"
+					cadenaReporteMBR += "<TR>\n<TD>Part_Size</TD><TD>" + strconv.FormatInt(mbr.MbrPartition2.PartSize, 10) + "</TD>\n</TR>\n"
+					var nombreP2 string
+					for i1, valor1 := range mbr.MbrPartition2.PartName {
+						if mbr.MbrPartition2.PartName[i1] != 0 {
+							nombreP2 += string(valor1)
+						}
+					}
+					cadenaReporteMBR += "<TR>\n<TD>Part_Name</TD><TD>" + nombreP2 + "</TD>\n</TR>\n"
+				}
+				//******************************************************************
+				//PARTICION 3
+				//******************************************************************
+				cadenaReporteMBR += "<TR>\n<TD BGCOLOR=\"#FF8585\" COLSPAN=\"2\">PARTICION 3</TD>\n</TR>\n"
+				if mbr.MbrPartition3.PartStatus == 1 {
+					cadenaReporteMBR += "<TR>\n<TD>Part_Status</TD><TD>1</TD>\n</TR>\n"
+				} else {
+					cadenaReporteMBR += "<TR>\n<TD>Part_Status</TD><TD>0</TD>\n</TR>\n"
+					typeP3 := string(mbr.MbrPartition3.PartType)
+					cadenaReporteMBR += "<TR>\n<TD>Part_Type</TD><TD>" + typeP3 + "</TD>\n</TR>\n"
+					fitP3 := string(mbr.MbrPartition3.PartFit)
+					cadenaReporteMBR += "<TR>\n<TD>Part_Fit</TD><TD>" + fitP3 + "</TD>\n</TR>\n"
+					cadenaReporteMBR += "<TR>\n<TD>Part_Start</TD><TD>" + strconv.FormatInt(mbr.MbrPartition3.PartStart, 10) + "</TD>\n</TR>\n"
+					cadenaReporteMBR += "<TR>\n<TD>Part_Size</TD><TD>" + strconv.FormatInt(mbr.MbrPartition3.PartSize, 10) + "</TD>\n</TR>\n"
+					var nombreP3 string
+					for i1, valor1 := range mbr.MbrPartition3.PartName {
+						if mbr.MbrPartition3.PartName[i1] != 0 {
+							nombreP3 += string(valor1)
+						}
+					}
+					cadenaReporteMBR += "<TR>\n<TD>Part_Name</TD><TD>" + nombreP3 + "</TD>\n</TR>\n"
+				}
+
+				//******************************************************************
+				//PARTICION 4
+				//******************************************************************
+				cadenaReporteMBR += "<TR>\n<TD BGCOLOR=\"#FF8585\" COLSPAN=\"2\">PARTICION 4</TD>\n</TR>\n"
+				if mbr.MbrPartition4.PartStatus == 1 {
+					cadenaReporteMBR += "<TR>\n<TD>Part_Status</TD><TD>1</TD>\n</TR>\n"
+				} else {
+					cadenaReporteMBR += "<TR>\n<TD>Part_Status</TD><TD>0</TD>\n</TR>\n"
+					typeP4 := string(mbr.MbrPartition4.PartType)
+					cadenaReporteMBR += "<TR>\n<TD>Part_Type</TD><TD>" + typeP4 + "</TD>\n</TR>\n"
+					fitP4 := string(mbr.MbrPartition4.PartFit)
+					cadenaReporteMBR += "<TR>\n<TD>Part_Fit</TD><TD>" + fitP4 + "</TD>\n</TR>\n"
+					cadenaReporteMBR += "<TR>\n<TD>Part_Start</TD><TD>" + strconv.FormatInt(mbr.MbrPartition4.PartStart, 10) + "</TD>\n</TR>\n"
+					cadenaReporteMBR += "<TR>\n<TD>Part_Size</TD><TD>" + strconv.FormatInt(mbr.MbrPartition4.PartSize, 10) + "</TD>\n</TR>\n"
+					var nombreP4 string
+					for i1, valor1 := range mbr.MbrPartition4.PartName {
+						if mbr.MbrPartition4.PartName[i1] != 0 {
+							nombreP4 += string(valor1)
+						}
+					}
+					cadenaReporteMBR += "<TR>\n<TD>Part_Name</TD><TD>" + nombreP4 + "</TD>\n</TR>\n"
+				}
+
+				cadenaReporteMBR += "</TABLE>\n>];\n}"
+
+				//******************************************************************
+				//Se escribe la cadena en el archivo .svg que usara Graphviz
+				//******************************************************************
+				nombreGV, nombreExtension := crearArchivoParaReporte(path, cadenaReporteMBR)
+				//******************************************************************
+				//Aca se genera el la imagen, pdf segun sea ingresada
+				//******************************************************************
+				//cmd := exec.Command("dot", "-Tps", "/home/javier/Imágenes/graph1.gv", "-o", "/home/javier/Imágenes/gra.pdf")
+				ruta, nombreArchivo := filepath.Split(path)
+				nombreCompleto := ruta + nombreArchivo
+
+				var cmd *exec.Cmd
+				if nombreExtension == ".pdf" {
+					cmd = exec.Command("dot", "-Tps", ruta+nombreGV, "-o", nombreCompleto)
+				} else {
+					cmd = exec.Command("dot", "-Tpng", ruta+nombreGV, "-o", nombreCompleto)
+				}
+				cmdOutput := &bytes.Buffer{}
+				cmd.Stdout = cmdOutput
+				err := cmd.Run()
+				if err != nil {
+					os.Stderr.WriteString(err.Error())
+				}
+				fmt.Print(string(cmdOutput.Bytes()))
+
+				ExisteID = true
+				break
+			}
+		}
+		if ExisteID == false {
+			fmt.Println(red + "[ERROR]" + reset + "El id " + cyan + id + reset + " no se encuentra montado")
+		}
+	}
+}
+
+//crearArchivoParaReporte = Metodo que almacena la informacion en el archivo .dot o .svg (segun sea el caso)
+//Primer parametro de retorno = retorna el nombre con la extension adecuada para generar el reporte en PDF o PNG, etc...
+//Segundo parametro de retorno = regresa la extension, para saber que comando ejectura en el sistema
+func crearArchivoParaReporte(path, cadena string) (string, string) {
+	ruta, nombreArchivo := filepath.Split(path)
+	//Ruta: /home/user/xxxx
+	//Nombre Archivo: yyy.go
+	var extension = filepath.Ext(nombreArchivo)                       //.go
+	var nombre = nombreArchivo[0 : len(nombreArchivo)-len(extension)] //yyy
+	//var nombreGV = nombre + ".gv"                                     //yyy.gv
+	var nombreGV string
+	if extension == ".pdf" {
+		nombreGV = nombre + ".svg" //yyy.sgv
+	} else {
+		nombreGV = nombre + ".dot" //yyy.dot
+	}
+
+	if ExisteCarpeta(ruta) == false {
+		CrearCarpeta(ruta)
+	}
+	if ExisteCarpeta(ruta) == true {
+		//Se genera el archivo .gv (para uso de graphvz)
+		file, err := os.Create(ruta + nombreGV)
+		if err != nil {
+			fmt.Println(err)
+		}
+		defer file.Close()
+		//Se escribe la informacion en el archivo
+		err2 := ioutil.WriteFile(ruta+nombreGV, []byte(cadena), 0644)
+		if err2 != nil {
+			log.Fatal(err2)
+		}
+	}
+	return nombreGV, extension
 }
