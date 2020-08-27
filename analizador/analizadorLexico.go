@@ -215,6 +215,9 @@ func Verificar_Tipo(cadenaOrdenada []string) {
 		} else if strings.ToLower(mamarre) == "unmount" {
 			fmt.Println(yellow + "Palabra reservada a ejecutar: " + magenta + "UNMOUNT" + reset)
 			funciones.FuncionUNMOUNT(cadenaOrdenada)
+		} else if strings.ToLower(mamarre) == "mkfs" {
+			fmt.Println(yellow + "Palabra reservada a ejecutar: " + magenta + "MKFS" + reset)
+			funciones.FuncionMKFS(cadenaOrdenada)
 		} else if strings.ToLower(mamarre) == "rep" {
 			fmt.Println(yellow + "Palabra reservada a ejecutar: " + magenta + "REP" + reset)
 			funciones.FuncionREP(cadenaOrdenada)

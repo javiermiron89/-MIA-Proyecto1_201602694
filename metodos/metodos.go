@@ -68,6 +68,25 @@ func CrearCarpeta(path string) bool {
 	return true
 }
 
+//existeID = busca el id en la lista de particiones montadas para retonar el path de la particion y retorna un true o false
+//segun sea el caso
+func existeID(id string) (string, bool) {
+	existe := false
+	var path string
+	if len(ContenedorMount) == 0 {
+		fmt.Println(red + "[ERROR]" + reset + "No existen particiones montadas")
+	} else {
+		for i := 0; i < len(ContenedorMount); i++ {
+			if ContenedorMount[i].ID == id {
+				path = ContenedorMount[i].Path
+				existe = true
+				break
+			}
+		}
+	}
+	return path, existe
+}
+
 func leerMBR(path string) MBR {
 	var mbr MBR
 	file, err := os.OpenFile(path, os.O_RDWR, 0755)
@@ -204,6 +223,40 @@ type MBR struct {
 	MbrPartition2    Partition
 	MbrPartition3    Partition
 	MbrPartition4    Partition
+}
+
+//SUPERBOOT es el struct que contiene el Super Bloque
+type SUPERBOOT struct {
+	SbNombreHd                      [16]byte
+	SbArbolVirtualCount             int64
+	SbDetalleDirectorioCount        int64
+	SbInodosCount                   int64
+	SbBloquesCount                  int64
+	SbArbonVirtualFree              int64
+	SbDetalleDirectorioFree         int64
+	SbInodosFree                    int64
+	SbBloquesFree                   int64
+	SbDateCreacion                  [16]byte
+	SbDateUltimoMontaje             [16]byte
+	SbMontajeCount                  int64
+	SbApBitmapArbolDirectorio       int64
+	SbApArbolDirectorio             int64
+	SbApBitmapDetalleDirectorio     int64
+	SbApDetalleDirectorio           int64
+	SbApBitmapTablaInodo            int64
+	SbApTablaInodo                  int64
+	SbApBitmapBloques               int64
+	SbApBloques                     int64
+	SbApLog                         int64
+	SbSizeStructArbolDirectorio     int64
+	SbSizeStructDetalleDirectorio   int64
+	SbSizeStructInodo               int64
+	SbSizeStructBloque              int64
+	SbFirstFreeBitArbolDirectorio   int64
+	SbFirstFreeBitDetalleDirectorio int64
+	SbFirstFreeBitTablaInodo        int64
+	SbFirstFreeBitBloques           int64
+	SbMagicNum                      int64
 }
 
 //-------------------------------------------------------------------------------------------------------------------------------------------
@@ -374,7 +427,7 @@ func EliminarDisco(path string) {
 //-------------------------------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------------------------------
-//RMDISK-----RMDISK-----METODOS-----METODOS-----RMDISK-----RMDISK-----METODOS-----METODOS-----RMDISK-----RMDISK-----METODOS-----METODOS------
+//FDISK-----FDISK-----METODOS-----METODOS-----FDISK-----FDISK-----METODOS-----METODOS-----FDISK-----FDISK-----METODOS-----METODOS-----FDISK--
 //-------------------------------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------------------------------
@@ -1105,7 +1158,7 @@ func existeNombreParticion(path, name string) bool {
 //-------------------------------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------------------------------
-//MOUNT-----MOUNT-----METODOS-----METODOS-----MOUNT-----MOUNT-----METODOS-----METODOS-----MOUNT-----MOUNT-----METODOS-----METODOS------------
+//UNMOUNT-----UNMOUNT-----METODOS-----METODOS-----UNMOUNT-----UNMOUNT-----METODOS-----METODOS-----UNMOUNT-----UNMOUNT-----METODOS-----METODOS
 //-------------------------------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------------------------------
@@ -1134,6 +1187,16 @@ func DesmontarParticion(idParticion string) {
 		fmt.Println(red + "[ERROR]" + reset + "El id " + cyan + idParticion + reset + " no se encuentra montado")
 	}
 }
+
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//MKFS-----MKFS-----METODOS-----METODOS-----MKFS-----MKFS-----METODOS-----METODOS-----MKFS-----MKFS-----METODOS-----METODOS-----MKFS-----MKFS
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
 
 //-------------------------------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------------------------------
@@ -1478,6 +1541,164 @@ func ReporteMBR(id, path string) {
 			fmt.Println(red + "[ERROR]" + reset + "El id " + cyan + id + reset + " no se encuentra montado")
 		}
 	}
+}
+
+//ReporteDISK = Metodo que genera el reporte mediante la funcion REP del MBR
+func ReporteDISK(id, path string) {
+	PathID, ExisteID := existeID(id)
+	var cadenaReporteDISK string
+	var cadenaReporteDISKAuxiliar string = ""
+
+	if ExisteID == true {
+		mbr := leerMBR(PathID)
+		cadenaReporteDISK = "digraph {\n  A [\nshape=plaintext\nlabel=<\n"
+		cadenaReporteDISK += "<table border='0' cellborder='1' BGCOLOR='#393939'  cellspacing='0'>\n"
+		cadenaReporteDISK += "<tr>\n<td rowspan = '2'><font color='#00ad5f'>MBR</font></td>\n"
+
+		if mbr.MbrPartition1.PartStatus == 1 {
+			cadenaReporteDISK += "<td rowspan = '2'><font BGCOLOR = '#fa4251' color='#white'>Libre</font></td>\n"
+		} else {
+			if mbr.MbrPartition1.PartType == 'P' {
+				cadenaReporteDISK += "<td rowspan = '2'><font color='#00ad5f'>Primaria</font></td>\n"
+			} else {
+				cadenaReporteDISK += "<td><font color='#00ad5f'>Extendida</font></td>\n"
+				cadenaReporteDISKAuxiliar += "<table color='black' border='0' cellborder='1' cellpadding='10' cellspacing='0'>\n"
+				cadenaReporteDISKAuxiliar += "<tr>\n"
+				cadenaReporteDISKAuxiliar += "<td BGCOLOR = '#fa4251'><font color='white'>EBR</font></td>\n"
+				cadenaReporteDISKAuxiliar += recorerParticionesLogicasReporte(PathID, mbr, 1)
+				cadenaReporteDISKAuxiliar += "</tr>\n"
+				cadenaReporteDISKAuxiliar += "</table>\n"
+			}
+		}
+		if mbr.MbrPartition2.PartStatus == 1 {
+			cadenaReporteDISK += "<td rowspan = '2'><font BGCOLOR = '#fa4251' color='#white'>Libre</font></td>\n"
+		} else {
+			if mbr.MbrPartition2.PartType == 'P' {
+				cadenaReporteDISK += "<td rowspan = '2'><font color='#00ad5f'>Primaria</font></td>\n"
+			} else {
+				cadenaReporteDISK += "<td><font color='#00ad5f'>Extendida</font></td>\n"
+				cadenaReporteDISKAuxiliar += "<table color='black' border='0' cellborder='1' cellpadding='10' cellspacing='0'>\n"
+				cadenaReporteDISKAuxiliar += "<tr>\n"
+				cadenaReporteDISKAuxiliar += "<td BGCOLOR = '#fa4251'><font color='white'>EBR</font></td>\n"
+				cadenaReporteDISKAuxiliar += recorerParticionesLogicasReporte(PathID, mbr, 2)
+				cadenaReporteDISKAuxiliar += "</tr>\n"
+				cadenaReporteDISKAuxiliar += "</table>\n"
+			}
+		}
+		if mbr.MbrPartition3.PartStatus == 1 {
+			cadenaReporteDISK += "<td rowspan = '2'><font BGCOLOR = '#fa4251' color='white'>Libre</font></td>\n"
+		} else {
+			if mbr.MbrPartition3.PartType == 'P' {
+				cadenaReporteDISK += "<td rowspan = '2'><font color='#00ad5f'>Primaria</font></td>\n"
+			} else {
+				cadenaReporteDISK += "<td><font color='#00ad5f'>Extendida</font></td>\n"
+				cadenaReporteDISKAuxiliar += "<table color='black' border='0' cellborder='1' cellpadding='10' cellspacing='0'>\n"
+				cadenaReporteDISKAuxiliar += "<tr>\n"
+				cadenaReporteDISKAuxiliar += "<td BGCOLOR = '#fa4251'><font color='white'>EBR</font></td>\n"
+				cadenaReporteDISKAuxiliar += recorerParticionesLogicasReporte(PathID, mbr, 3)
+				cadenaReporteDISKAuxiliar += "</tr>\n"
+				cadenaReporteDISKAuxiliar += "</table>\n"
+			}
+		}
+		if mbr.MbrPartition4.PartStatus == 1 {
+			cadenaReporteDISK += "<td rowspan = '2'><font BGCOLOR = '#fa4251' color='white'>Libre</font></td>\n"
+		} else {
+			if mbr.MbrPartition4.PartType == 'P' {
+				cadenaReporteDISK += "<td rowspan = '2'><font color='#00ad5f'>Primaria</font></td>\n"
+			} else {
+				cadenaReporteDISK += "<td><font color='#00ad5f'>Extendida</font></td>\n"
+				cadenaReporteDISKAuxiliar += "<table color='black' border='0' cellborder='1' cellpadding='10' cellspacing='0'>\n"
+				cadenaReporteDISKAuxiliar += "<tr>\n"
+				cadenaReporteDISKAuxiliar += "<td BGCOLOR = '#fa4251'><font color='white'>EBR</font></td>\n"
+				cadenaReporteDISKAuxiliar += recorerParticionesLogicasReporte(PathID, mbr, 4)
+				cadenaReporteDISKAuxiliar += "</tr>\n"
+				cadenaReporteDISKAuxiliar += "</table>\n"
+			}
+		}
+		cadenaReporteDISK += "</tr>\n"
+		cadenaReporteDISK += "<tr>\n<td>\n"
+		cadenaReporteDISK += cadenaReporteDISKAuxiliar
+		cadenaReporteDISK += "</td>\n</tr>"
+		cadenaReporteDISK += "</table>\n"
+		cadenaReporteDISK += ">];\n}"
+
+		//******************************************************************
+		//Se escribe la cadena en el archivo .svg que usara Graphviz
+		//******************************************************************
+		nombreGV, nombreExtension := crearArchivoParaReporte(path, cadenaReporteDISK)
+		//******************************************************************
+		//Aca se genera el la imagen, pdf segun sea ingresada
+		//******************************************************************
+		//cmd := exec.Command("dot", "-Tps", "/home/javier/Imágenes/graph1.gv", "-o", "/home/javier/Imágenes/gra.pdf")
+		ruta, nombreArchivo := filepath.Split(path)
+		nombreCompleto := ruta + nombreArchivo
+
+		var cmd *exec.Cmd
+		if nombreExtension == ".pdf" {
+			cmd = exec.Command("dot", "-Tps", ruta+nombreGV, "-o", nombreCompleto)
+		} else {
+			cmd = exec.Command("dot", "-Tpng", ruta+nombreGV, "-o", nombreCompleto)
+		}
+		cmdOutput := &bytes.Buffer{}
+		cmd.Stdout = cmdOutput
+		err := cmd.Run()
+		if err != nil {
+			os.Stderr.WriteString(err.Error())
+		}
+		fmt.Print(string(cmdOutput.Bytes()))
+	} else {
+
+	}
+}
+
+func recorerParticionesLogicasReporte(path string, mbr MBR, queParticionExtendida int) string {
+	var ebr EBR
+	var cadena string = ""
+	siExisteExtendida := false
+
+	if queParticionExtendida == 1 {
+		ebr = leerEBR(path, mbr.MbrPartition1.PartStart)
+		siExisteExtendida = true
+	} else if queParticionExtendida == 2 {
+		ebr = leerEBR(path, mbr.MbrPartition2.PartStart)
+		siExisteExtendida = true
+	} else if queParticionExtendida == 3 {
+		ebr = leerEBR(path, mbr.MbrPartition3.PartStart)
+		siExisteExtendida = true
+	} else if queParticionExtendida == 4 {
+		ebr = leerEBR(path, mbr.MbrPartition4.PartStart)
+		siExisteExtendida = true
+	}
+
+	var tamEBR int64 = int64(binary.Size(ebr))
+	var contadorLogica int64 = 1
+	var sumadorStart int64 = ebr.PartStart
+	var ebrAnterior EBR
+	if siExisteExtendida == true {
+		file, err := os.OpenFile(path, os.O_RDWR, 0755)
+		defer file.Close()
+		if err != nil {
+			fmt.Println(red + "[ERROR]" + reset + "No se ha podido abrir el archivo")
+		}
+		for {
+			if contadorLogica == 1 { // Solo sirve para llenar el primer EBR
+				cadena += "<td BGCOLOR = '#393939'><font color='white'>Logica</font></td>\n"
+				contadorLogica++
+			} else {
+				ebrAnterior = leerEBR(path, sumadorStart)
+				sumadorStart += tamEBR + ebr.PartSize
+				if ebrAnterior.PartNext == -1 {
+					break
+				} else {
+					cadena += "<td BGCOLOR = '#fa4251'><font color='white'>EBR</font></td>\n"
+					cadena += "<td BGCOLOR = '#393939'><font color='white'>Logica</font></td>\n"
+					file.Seek(sumadorStart, 0)
+				}
+				contadorLogica++
+			}
+		}
+	}
+	return cadena
 }
 
 //crearArchivoParaReporte = Metodo que almacena la informacion en el archivo .dot o .svg (segun sea el caso)

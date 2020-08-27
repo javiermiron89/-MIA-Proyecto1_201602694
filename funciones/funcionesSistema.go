@@ -353,6 +353,72 @@ func FuncionUNMOUNT(vector []string) {
 //-------------------------------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------------------------------
+//MKFS-----MKFS-----FUNCIONES-----FUNCIONES-----MKFS-----MKFS-----FUNCIONES-----FUNCIONES-----MKFS-----MKFS-----FUNCIONES-----FUNCIONES------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+
+//FuncionMKFS =
+func FuncionMKFS(vector []string) {
+	var parametros [4]string //[0]ID   [1]TIPO	[2]ADD	[3]UNIT
+	var vecAuxiliar []string = nil
+	idObligatorio := false
+	tipoOpcional := false
+	addOpcional := false
+	unitOpcional := false
+
+	for j := 1; j < len(vector); j++ {
+		vecAuxiliar = strings.SplitN(vector[j], "->", -1)
+		if strings.ToLower(vecAuxiliar[0]) == "-id" {
+			parametros[0] = vecAuxiliar[1]
+			idObligatorio = true
+		} else if strings.ToLower(vecAuxiliar[0]) == "-tipo" {
+			if strings.ToLower(vecAuxiliar[1]) == "fast" {
+				parametros[1] = "FAST"
+				tipoOpcional = true
+			} else if strings.ToLower(vecAuxiliar[1]) == "full" {
+				parametros[1] = "FULL"
+				tipoOpcional = true
+			}
+		} else if strings.ToLower(vecAuxiliar[0]) == "-add" {
+			parametros[2] = vecAuxiliar[1]
+			addOpcional = true
+		} else if strings.ToLower(vecAuxiliar[0]) == "-unit" {
+			if strings.ToLower(vecAuxiliar[1]) == "b" {
+				parametros[3] = "B"
+				tipoOpcional = true
+			} else if strings.ToLower(vecAuxiliar[1]) == "k" {
+				parametros[3] = "K"
+				tipoOpcional = true
+			} else if strings.ToLower(vecAuxiliar[1]) == "m" {
+				parametros[3] = "M"
+				tipoOpcional = true
+			}
+
+		}
+	}
+	//[0]ID   [1]TIPO	[2]ADD	[3]UNIT
+	if idObligatorio == true {
+		if tipoOpcional == false {
+			parametros[1] = "FULL"
+		}
+		if addOpcional == false {
+
+		}
+		if unitOpcional == false {
+			parametros[3] = "K"
+		}
+
+	} else {
+		fmt.Println(red + "[ERROR]" + reset + "Los parametros de " + magenta + "MKFS" + reset + " obligatorios no han sido completamente ingresados")
+	}
+}
+
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
 //REP-----REP-----FUNCIONES-----FUNCIONES-----REP-----REP-----FUNCIONES-----FUNCIONES-----REP-----REP-----FUNCIONES-----FUNCIONES-----REP----
 //-------------------------------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------------------------------
@@ -430,6 +496,8 @@ func FuncionREP(vector []string) {
 		}
 		if parametros[0] == "MBR" {
 			metodos.ReporteMBR(parametros[2], parametros[1])
+		} else if parametros[0] == "DISK" {
+			metodos.ReporteDISK(parametros[2], parametros[1])
 		}
 	} else {
 		fmt.Println(red + "[ERROR]" + reset + "Los parametros de " + magenta + "REP" + reset + " obligatorios no han sido completamente ingresados")
