@@ -409,7 +409,7 @@ func FuncionMKFS(vector []string) {
 		if unitOpcional == false {
 			parametros[3] = "K"
 		}
-
+		metodos.FormateLWH(parametros[0])
 	} else {
 		fmt.Println(red + "[ERROR]" + reset + "Los parametros de " + magenta + "MKFS" + reset + " obligatorios no han sido completamente ingresados")
 	}
@@ -436,7 +436,7 @@ func FuncionREP(vector []string) {
 
 	for j := 1; j < len(vector); j++ {
 		vecAuxiliar = strings.SplitN(vector[j], "->", -1)
-		if strings.ToLower(vecAuxiliar[0]) == "-nombre" {
+		if strings.ToLower(vecAuxiliar[0]) == "-name" {
 			if strings.ToLower(vecAuxiliar[1]) == "mbr" {
 				parametros[0] = "MBR"
 				nombreObligatorio = true
@@ -498,6 +498,12 @@ func FuncionREP(vector []string) {
 			metodos.ReporteMBR(parametros[2], parametros[1])
 		} else if parametros[0] == "DISK" {
 			metodos.ReporteDISK(parametros[2], parametros[1])
+		} else if parametros[0] == "SB" {
+			metodos.ReporteSB(parametros[2], parametros[1])
+		} else if parametros[0] == "BM_ARBDIR" {
+			metodos.ReporteBitmapArboldirectorio(parametros[2], parametros[1])
+		} else if parametros[0] == "BM_DETDIR" {
+			metodos.ReporteBitmapArboldirectorio(parametros[2], parametros[1])
 		}
 	} else {
 		fmt.Println(red + "[ERROR]" + reset + "Los parametros de " + magenta + "REP" + reset + " obligatorios no han sido completamente ingresados")

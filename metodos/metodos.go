@@ -57,34 +57,59 @@ func ExisteCarpeta(path string) bool {
 
 //CrearCarpeta =
 func CrearCarpeta(path string) bool {
-	os.Mkdir(path, 0755)
-	if _, err := os.Stat(path); os.IsNotExist(err) {
-		if err != nil {
-			//panic(err)
+	_, err := os.Stat(path)
+
+	if os.IsNotExist(err) {
+		errDir := os.MkdirAll(path, 0755)
+		if errDir != nil {
+			log.Fatal(err)
 			return false
 		}
 		return true
 	}
 	return true
+	/*
+		os.MkdirAll(path, 0777)
+		if _, err := os.Stat(path); os.IsNotExist(err) {
+			if err != nil {
+				//panic(err)
+				return false
+			}
+			return true
+		}
+		return true
+	*/
 }
 
-//existeID = busca el id en la lista de particiones montadas para retonar el path de la particion y retorna un true o false
+//existeID = busca el id en la lista de particiones montadas para retonar el path y nombre de la particion y retorna un true o false
 //segun sea el caso
-func existeID(id string) (string, bool) {
+func existeID(id string) (string, string, bool) {
 	existe := false
 	var path string
+	var nombre string
 	if len(ContenedorMount) == 0 {
 		fmt.Println(red + "[ERROR]" + reset + "No existen particiones montadas")
 	} else {
 		for i := 0; i < len(ContenedorMount); i++ {
 			if ContenedorMount[i].ID == id {
 				path = ContenedorMount[i].Path
+				nombre = ContenedorMount[i].NombreParticion
 				existe = true
 				break
 			}
 		}
 	}
-	return path, existe
+	return path, nombre, existe
+}
+
+//numeroDeEstructuras = funcion encargada de retornar el numero de estructuras a utilizar en la particion
+func numeroDeEstructuras(tamanoDeParticion, tamanoDelSuperBloque, tamanoArbolVitual, tamanoDetalleDirectorio, tamanoInodo, tamanoBloque, bitacora int64) int64 {
+	var numEstructuras float64 = 0
+	var numerador float64 = (float64(tamanoDeParticion) - (2 * float64(tamanoDelSuperBloque)))
+	var denominador float64 = (27 + float64(tamanoArbolVitual) + float64(tamanoDetalleDirectorio) + (5*float64(tamanoInodo) + (20 * float64(tamanoBloque)) + float64(bitacora)))
+	numEstructuras = numerador / denominador
+	fmt.Println(green+"Numero de Estructuras: "+reset, numEstructuras)
+	return int64(numEstructuras)
 }
 
 func leerMBR(path string) MBR {
@@ -154,6 +179,27 @@ func leerEBR(path string, start int64) EBR {
 		fmt.Println(magenta + "---------------------------------------------------------------------" + reset)
 	*/
 	return ebr
+}
+
+func leerSB(path string, start int64) SUPERBOOT {
+	var sb SUPERBOOT
+	file, err := os.OpenFile(path, os.O_RDWR, 0755)
+
+	defer file.Close()
+	if err != nil {
+		fmt.Println(red + "[ERROR]" + reset + "No se ha podido abrir el archivo")
+	}
+
+	var tamanoEnBytes int = int(binary.Size(sb))
+
+	file.Seek(start, 0)
+	data := leerBytes(file, tamanoEnBytes)
+	buffer := bytes.NewBuffer(data)
+	err = binary.Read(buffer, binary.BigEndian, &sb)
+	if err != nil {
+		fmt.Println(err)
+	}
+	return sb
 }
 
 func escribirBytes(file *os.File, bytes []byte) {
@@ -232,12 +278,12 @@ type SUPERBOOT struct {
 	SbDetalleDirectorioCount        int64
 	SbInodosCount                   int64
 	SbBloquesCount                  int64
-	SbArbonVirtualFree              int64
+	SbArbolVirtualFree              int64
 	SbDetalleDirectorioFree         int64
 	SbInodosFree                    int64
 	SbBloquesFree                   int64
-	SbDateCreacion                  [16]byte
-	SbDateUltimoMontaje             [16]byte
+	SbDateCreacion                  [19]byte
+	SbDateUltimoMontaje             [19]byte
 	SbMontajeCount                  int64
 	SbApBitmapArbolDirectorio       int64
 	SbApArbolDirectorio             int64
@@ -257,6 +303,54 @@ type SUPERBOOT struct {
 	SbFirstFreeBitTablaInodo        int64
 	SbFirstFreeBitBloques           int64
 	SbMagicNum                      int64
+}
+
+//ARBOLVIRTUALDIRECTORIO es el struct que contiene el arbol virtual de directorio
+type ARBOLVIRTUALDIRECTORIO struct {
+	AvdFechaCreacion            [20]byte
+	AvdNombreDirectorio         [16]byte
+	AvdApArraySubdirectorios    [6]int64
+	AvdApDetalleDirectorio      int64
+	AvdApArbolVirtualDirectorio int64
+	AvdProper                   [3]byte
+}
+
+//DETALLEDIRECTORIO =
+type DETALLEDIRECTORIO struct {
+	DdArrayFiles          [5]SUBDETALLEDIRECTORIO
+	DdApDetalleDirectorio int64
+}
+
+//SUBDETALLEDIRECTORIO =
+type SUBDETALLEDIRECTORIO struct {
+	DdFileNombre           [16]byte
+	DdFileApInodo          int64
+	DdFileDateCreacion     [20]byte
+	DdFileDateModificacion [20]byte
+}
+
+//TABLAINODO =
+type TABLAINODO struct {
+	ICountInodo            int64
+	ISizeArchivo           int64
+	ICountBloquesAsignados int64
+	IArrayBloques          [4]int64
+	IApIndirecto           int64
+	IIdProper              [3]byte
+}
+
+//BLOQUEDATOS =
+type BLOQUEDATOS struct {
+	DbDato [25]byte
+}
+
+//BITACORA =
+type BITACORA struct {
+	LogTipoOperacion string
+	LogTipo          byte
+	LogNombre        [16]byte
+	LogContenido     byte
+	LogFecha         [20]byte
 }
 
 //-------------------------------------------------------------------------------------------------------------------------------------------
@@ -1198,6 +1292,161 @@ func DesmontarParticion(idParticion string) {
 //-------------------------------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------------------------------
 
+//FormateLWH =
+func FormateLWH(id string) {
+	path, nameParticion, Existe := existeID(id)
+	mbr := leerMBR(path)
+	var sb SUPERBOOT
+	var tamParticion int64 = 0
+	var nombreAByte16 [16]byte
+	var start int64
+
+	if Existe == true {
+		copy(nombreAByte16[:], nameParticion)
+		if mbr.MbrPartition1.PartName == nombreAByte16 {
+			tamParticion = mbr.MbrPartition1.PartSize
+			start = mbr.MbrPartition1.PartStart
+		} else if mbr.MbrPartition2.PartName == nombreAByte16 {
+			tamParticion = mbr.MbrPartition2.PartSize
+			start = mbr.MbrPartition2.PartStart
+		} else if mbr.MbrPartition3.PartName == nombreAByte16 {
+			tamParticion = mbr.MbrPartition3.PartSize
+			start = mbr.MbrPartition3.PartStart
+		} else if mbr.MbrPartition4.PartName == nombreAByte16 {
+			tamParticion = mbr.MbrPartition4.PartSize
+			start = mbr.MbrPartition4.PartStart
+		}
+		fmt.Println(cyan+"Tamaño Particion: "+reset, tamParticion)
+		tamSuperBoot := int64(binary.Size(SUPERBOOT{}))
+		fmt.Println("Tamaño Super Boot: ", tamSuperBoot)
+		tamArbolVirtualDirectorio := int64(unsafe.Sizeof(ARBOLVIRTUALDIRECTORIO{}))
+		fmt.Println("Tamaño Arbol Virtual: ", tamArbolVirtualDirectorio)
+		tamDetalleDirectorio := int64(binary.Size(DETALLEDIRECTORIO{}))
+		fmt.Println("Tamaño Detalle Directorio: ", tamDetalleDirectorio)
+		tamTablaInodo := int64(binary.Size(TABLAINODO{}))
+		fmt.Println("Tamaño Tabla Inodo: ", tamTablaInodo)
+		tamBloqueDatos := int64(binary.Size(BLOQUEDATOS{}))
+		fmt.Println("Tamaño Bloque Datos: ", tamBloqueDatos)
+		tamBitacora := int64(unsafe.Sizeof(BITACORA{}))
+		fmt.Println("Tamaño Bitacora: ", tamBitacora)
+		numEstructuras := numeroDeEstructuras(tamParticion, tamSuperBoot, tamArbolVirtualDirectorio, tamDetalleDirectorio, tamTablaInodo, tamBloqueDatos, tamBitacora)
+		fmt.Println(red+"Numero de Estructuras: "+reset, numEstructuras)
+
+		bitmapArbolVirtualDirectorio := make([]byte, numEstructuras)
+		bitmapDetalleDirectorio := make([]byte, numEstructuras)
+		bitmapTablaInodos := make([]byte, numEstructuras)
+		bitmapBloqueDatos := make([]byte, numEstructuras)
+
+		fmt.Println("Bitmap Arbol Virtual: ", binary.Size(bitmapArbolVirtualDirectorio))
+		fmt.Println("Bitmap Detalle Directorio: ", binary.Size(bitmapDetalleDirectorio))
+		fmt.Println("Bitmap Tabla Inodos: ", binary.Size(bitmapTablaInodos))
+		fmt.Println("Bitmap Bloque Datos: ", binary.Size(bitmapBloqueDatos))
+
+		//Se obtiene el nombre del disco
+		_, nombreArchivo := filepath.Split(path)
+		var nombreDiscoAByte16 [16]byte
+		copy(nombreDiscoAByte16[:], nombreArchivo)
+		//Se obtiene la fecha
+		tiempo := time.Now()
+		formatoTiempo := tiempo.Format("01-02-2006 15:04:05")
+		//tiempoTemp := []byte(formatoTiempo)
+		var conversorTiempo [19]byte
+		copy(conversorTiempo[:], formatoTiempo)
+
+		sb.SbNombreHd = nombreDiscoAByte16
+		sb.SbArbolVirtualCount = numEstructuras
+		sb.SbDetalleDirectorioCount = numEstructuras
+		sb.SbInodosCount = numEstructuras
+		sb.SbBloquesCount = numEstructuras
+		sb.SbArbolVirtualFree = numEstructuras
+		sb.SbDetalleDirectorioFree = numEstructuras
+		sb.SbInodosFree = numEstructuras
+		sb.SbBloquesFree = numEstructuras
+		sb.SbDateCreacion = conversorTiempo
+		sb.SbDateUltimoMontaje = conversorTiempo
+		sb.SbMontajeCount = 0
+		sb.SbApBitmapArbolDirectorio = start + tamSuperBoot
+		sb.SbApArbolDirectorio = sb.SbApBitmapArbolDirectorio + int64(binary.Size(bitmapArbolVirtualDirectorio))
+		sb.SbApBitmapDetalleDirectorio = sb.SbApArbolDirectorio + (tamArbolVirtualDirectorio * numEstructuras)
+		sb.SbApDetalleDirectorio = sb.SbApBitmapDetalleDirectorio + int64(binary.Size(bitmapDetalleDirectorio))
+		sb.SbApBitmapTablaInodo = sb.SbApDetalleDirectorio + (tamDetalleDirectorio * numEstructuras)
+		sb.SbApTablaInodo = sb.SbApBitmapTablaInodo + int64(binary.Size(bitmapTablaInodos))
+		sb.SbApBitmapBloques = sb.SbApTablaInodo + (tamTablaInodo * numEstructuras)
+		sb.SbApBloques = sb.SbApBitmapBloques + int64(binary.Size(bitmapBloqueDatos))
+		sb.SbApLog = sb.SbApBloques + (tamBloqueDatos * numEstructuras)
+		sb.SbSizeStructArbolDirectorio = tamArbolVirtualDirectorio
+		sb.SbSizeStructDetalleDirectorio = tamDetalleDirectorio
+		sb.SbSizeStructInodo = tamTablaInodo
+		sb.SbSizeStructBloque = tamBloqueDatos
+		sb.SbFirstFreeBitArbolDirectorio = 0
+		sb.SbFirstFreeBitDetalleDirectorio = 0
+		sb.SbFirstFreeBitTablaInodo = 0
+		sb.SbFirstFreeBitBloques = 0
+		sb.SbMagicNum = 201602694
+
+		//********************************************************
+		//Se abre el Archivo
+		//********************************************************
+		file, err := os.OpenFile(path, os.O_RDWR, 0755)
+		defer file.Close()
+		if err != nil {
+			fmt.Println(red + "[ERROR]" + reset + "No se ha podido abrir el archivo")
+		}
+		//********************************************************
+		//Se escribe el Super Boot
+		//********************************************************
+		file.Seek(start, 0)
+		var binarioSuperBoot bytes.Buffer
+		binary.Write(&binarioSuperBoot, binary.BigEndian, &sb)
+		escribirBytes(file, binarioSuperBoot.Bytes())
+		//********************************************************
+		//Se escribe el bitmap de Arbol de Directorio
+		//********************************************************
+		var numero0 byte
+		numero0 = '0'
+
+		file.Seek(sb.SbApBitmapArbolDirectorio, 0)
+		for i := 0; i < int(numEstructuras); i++ {
+			var valorBinario bytes.Buffer
+			binary.Write(&valorBinario, binary.BigEndian, &numero0)
+			escribirBytes(file, valorBinario.Bytes())
+		}
+		//********************************************************
+		//Se escribe el bitmap de Detalle de Directorio
+		//********************************************************
+		file.Seek(sb.SbApBitmapDetalleDirectorio, 0)
+		for i := 0; i < int(numEstructuras); i++ {
+			var valorBinario bytes.Buffer
+			binary.Write(&valorBinario, binary.BigEndian, &numero0)
+			escribirBytes(file, valorBinario.Bytes())
+		}
+		//********************************************************
+		//Se escribe el bitmap Tabla Inodo
+		//********************************************************
+		file.Seek(sb.SbApBitmapTablaInodo, 0)
+		for i := 0; i < int(numEstructuras); i++ {
+			var valorBinario bytes.Buffer
+			binary.Write(&valorBinario, binary.BigEndian, &numero0)
+			escribirBytes(file, valorBinario.Bytes())
+		}
+		//********************************************************
+		//Se escribe el bitmap de Bloques
+		//********************************************************
+		file.Seek(sb.SbApBitmapBloques, 0)
+		for i := 0; i < int(numEstructuras); i++ {
+			var valorBinario bytes.Buffer
+			binary.Write(&valorBinario, binary.BigEndian, &numero0)
+			escribirBytes(file, valorBinario.Bytes())
+		}
+	}
+
+	//v := numeroDeEstructuras()
+
+	fmt.Println(path)
+	fmt.Println(nameParticion)
+	fmt.Println(mbr.MbrTamano)
+}
+
 //-------------------------------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------------------------------
@@ -1545,7 +1794,7 @@ func ReporteMBR(id, path string) {
 
 //ReporteDISK = Metodo que genera el reporte mediante la funcion REP del MBR
 func ReporteDISK(id, path string) {
-	PathID, ExisteID := existeID(id)
+	PathID, _, ExisteID := existeID(id)
 	var cadenaReporteDISK string
 	var cadenaReporteDISKAuxiliar string = ""
 
@@ -1701,6 +1950,179 @@ func recorerParticionesLogicasReporte(path string, mbr MBR, queParticionExtendid
 	return cadena
 }
 
+//ReporteSB = Genera el reporte del Super Boot
+func ReporteSB(id, path string) {
+	PathID, NombreParticion, ExisteID := existeID(id) //Path, nombre particion, bool si existe
+	var cadenaReporteSB string
+	var start int64
+	//var cadenaReporteDISKAuxiliar string = ""
+
+	if ExisteID == true {
+		mbr := leerMBR(PathID)
+		var nombreAByte16 [16]byte
+		copy(nombreAByte16[:], NombreParticion)
+		if mbr.MbrPartition1.PartName == nombreAByte16 {
+			start = mbr.MbrPartition1.PartStart
+		} else if mbr.MbrPartition2.PartName == nombreAByte16 {
+			start = mbr.MbrPartition1.PartStart
+		} else if mbr.MbrPartition3.PartName == nombreAByte16 {
+			start = mbr.MbrPartition1.PartStart
+		} else if mbr.MbrPartition4.PartName == nombreAByte16 {
+			start = mbr.MbrPartition1.PartStart
+		}
+		//******************************************************
+		//Se inicia el el llenado de los datos de Graphviz
+		//******************************************************
+
+		sb := leerSB(PathID, start)
+		cadenaReporteSB = "digraph MBR {\nnode [shape=plaintext]\nA [label=<\n<TABLE BORDER='0' CELLBORDER='1' CELLSPACING='0'>\n"
+		cadenaReporteSB += "<TR>\n<TD BGCOLOR='#5A69D6' COLSPAN='2'><font color='white'>REPORTE SB</font></TD>\n</TR>\n"
+		cadenaReporteSB += "<TR>\n<TD BGCOLOR='#6C7AE0'><font color='white'>NOMBRE</font></TD><TD BGCOLOR='#6C7AE0'><font color='white'>VALOR</font></TD>\n</TR>\n"
+		var nombreDiscoSin0s string
+		for i1, valor1 := range sb.SbNombreHd {
+			if sb.SbNombreHd[i1] != 0 {
+				nombreDiscoSin0s += string(valor1)
+			}
+		}
+		cadenaReporteSB += "<TR>\n<TD BGCOLOR='#A1ACFC'>sb_nombre_hd</TD><TD>" + nombreDiscoSin0s + "</TD>\n</TR>\n"
+		cadenaReporteSB += "<TR>\n<TD BGCOLOR='#A1ACFC'>sb_arbol_virtual_count</TD><TD>" + strconv.FormatInt(sb.SbArbolVirtualCount, 10) + "</TD>\n</TR>\n"
+		cadenaReporteSB += "<TR>\n<TD BGCOLOR='#A1ACFC'>sb_detalle_directorio_count</TD><TD>" + strconv.FormatInt(sb.SbDetalleDirectorioCount, 10) + "</TD>\n</TR>\n"
+		cadenaReporteSB += "<TR>\n<TD BGCOLOR='#A1ACFC'>sb_inodos_count</TD><TD>" + strconv.FormatInt(sb.SbInodosCount, 10) + "</TD>\n</TR>\n"
+		cadenaReporteSB += "<TR>\n<TD BGCOLOR='#A1ACFC'>sb_bloques_count</TD><TD>" + strconv.FormatInt(sb.SbBloquesCount, 10) + "</TD>\n</TR>\n"
+		cadenaReporteSB += "<TR>\n<TD BGCOLOR='#A1ACFC'>sb_arbol_virtual_free</TD><TD>" + strconv.FormatInt(sb.SbArbolVirtualFree, 10) + "</TD>\n</TR>\n"
+		cadenaReporteSB += "<TR>\n<TD BGCOLOR='#A1ACFC'>sb_detalle_directorio_free</TD><TD>" + strconv.FormatInt(sb.SbDetalleDirectorioFree, 10) + "</TD>\n</TR>\n"
+		cadenaReporteSB += "<TR>\n<TD BGCOLOR='#A1ACFC'>sb_inodos_free</TD><TD>" + strconv.FormatInt(sb.SbInodosFree, 10) + "</TD>\n</TR>\n"
+		cadenaReporteSB += "<TR>\n<TD BGCOLOR='#A1ACFC'>sb_bloques_free</TD><TD>" + strconv.FormatInt(sb.SbBloquesFree, 10) + "</TD>\n</TR>\n"
+		cadenaReporteSB += "<TR>\n<TD BGCOLOR='#A1ACFC'>sb_date_creacion</TD><TD>" + string(sb.SbDateCreacion[:19]) + "</TD>\n</TR>\n"
+		cadenaReporteSB += "<TR>\n<TD BGCOLOR='#A1ACFC'>sb_date_ultimo_montaje</TD><TD>" + string(sb.SbDateUltimoMontaje[:19]) + "</TD>\n</TR>\n"
+		cadenaReporteSB += "<TR>\n<TD BGCOLOR='#A1ACFC'>sb_montaje_count</TD><TD>" + strconv.FormatInt(sb.SbMontajeCount, 10) + "</TD>\n</TR>\n"
+		cadenaReporteSB += "<TR>\n<TD BGCOLOR='#A1ACFC'>sb_ap_bitmap_arbol_directorio</TD><TD>" + strconv.FormatInt(sb.SbApBitmapArbolDirectorio, 10) + "</TD>\n</TR>\n"
+		cadenaReporteSB += "<TR>\n<TD BGCOLOR='#A1ACFC'>sb_ap_arbol_directorio</TD><TD>" + strconv.FormatInt(sb.SbApArbolDirectorio, 10) + "</TD>\n</TR>\n"
+		cadenaReporteSB += "<TR>\n<TD BGCOLOR='#A1ACFC'>sb_ap_bitmap_detalle_directorio</TD><TD>" + strconv.FormatInt(sb.SbApBitmapDetalleDirectorio, 10) + "</TD>\n</TR>\n"
+		cadenaReporteSB += "<TR>\n<TD BGCOLOR='#A1ACFC'>sb_ap_detalle_directorio</TD><TD>" + strconv.FormatInt(sb.SbApDetalleDirectorio, 10) + "</TD>\n</TR>\n"
+		cadenaReporteSB += "<TR>\n<TD BGCOLOR='#A1ACFC'>sb_ap_bitmap_tabla_inodo</TD><TD>" + strconv.FormatInt(sb.SbApBitmapTablaInodo, 10) + "</TD>\n</TR>\n"
+		cadenaReporteSB += "<TR>\n<TD BGCOLOR='#A1ACFC'>sb_ap_tabla_inodo</TD><TD>" + strconv.FormatInt(sb.SbApTablaInodo, 10) + "</TD>\n</TR>\n"
+		cadenaReporteSB += "<TR>\n<TD BGCOLOR='#A1ACFC'>sb_ap_bitmap_bloques</TD><TD>" + strconv.FormatInt(sb.SbApBitmapBloques, 10) + "</TD>\n</TR>\n"
+		cadenaReporteSB += "<TR>\n<TD BGCOLOR='#A1ACFC'>sb_ap_bloques</TD><TD>" + strconv.FormatInt(sb.SbApBloques, 10) + "</TD>\n</TR>\n"
+		cadenaReporteSB += "<TR>\n<TD BGCOLOR='#A1ACFC'>sb_ap_log</TD><TD>" + strconv.FormatInt(sb.SbApLog, 10) + "</TD>\n</TR>\n"
+		cadenaReporteSB += "<TR>\n<TD BGCOLOR='#A1ACFC'>sb_size_struct_arbol_directorio</TD><TD>" + strconv.FormatInt(sb.SbSizeStructArbolDirectorio, 10) + "</TD>\n</TR>\n"
+		cadenaReporteSB += "<TR>\n<TD BGCOLOR='#A1ACFC'>sb_size_struct_detalle_directorio</TD><TD>" + strconv.FormatInt(sb.SbSizeStructDetalleDirectorio, 10) + "</TD>\n</TR>\n"
+		cadenaReporteSB += "<TR>\n<TD BGCOLOR='#A1ACFC'>sb_size_struct_inodo</TD><TD>" + strconv.FormatInt(sb.SbSizeStructInodo, 10) + "</TD>\n</TR>\n"
+		cadenaReporteSB += "<TR>\n<TD BGCOLOR='#A1ACFC'>sb_size_struct_bloque</TD><TD>" + strconv.FormatInt(sb.SbSizeStructBloque, 10) + "</TD>\n</TR>\n"
+		cadenaReporteSB += "<TR>\n<TD BGCOLOR='#A1ACFC'>sb_first_free_bit_arbol_directorio</TD><TD>" + strconv.FormatInt(sb.SbFirstFreeBitArbolDirectorio, 10) + "</TD>\n</TR>\n"
+		cadenaReporteSB += "<TR>\n<TD BGCOLOR='#A1ACFC'>sb_first_free_bit_detalle_directorio</TD><TD>" + strconv.FormatInt(sb.SbFirstFreeBitDetalleDirectorio, 10) + "</TD>\n</TR>\n"
+		cadenaReporteSB += "<TR>\n<TD BGCOLOR='#A1ACFC'>sb_first_free_bit_tabla_inodo</TD><TD>" + strconv.FormatInt(sb.SbFirstFreeBitTablaInodo, 10) + "</TD>\n</TR>\n"
+		cadenaReporteSB += "<TR>\n<TD BGCOLOR='#A1ACFC'>sb_first_free_bit_bloques</TD><TD>" + strconv.FormatInt(sb.SbFirstFreeBitBloques, 10) + "</TD>\n</TR>\n"
+		cadenaReporteSB += "<TR>\n<TD BGCOLOR='#A1ACFC'>sb_magic_num</TD><TD>" + strconv.FormatInt(sb.SbMagicNum, 10) + "</TD>\n</TR>\n"
+		cadenaReporteSB += "</TABLE>\n>];\n}"
+
+		//******************************************************************
+		//Se escribe la cadena en el archivo .svg que usara Graphviz
+		//******************************************************************
+		nombreGV, nombreExtension := crearArchivoParaReporte(path, cadenaReporteSB)
+		//******************************************************************
+		//Aca se genera el la imagen, pdf segun sea ingresada
+		//******************************************************************
+		//cmd := exec.Command("dot", "-Tps", "/home/javier/Imágenes/graph1.gv", "-o", "/home/javier/Imágenes/gra.pdf")
+		ruta, nombreArchivo := filepath.Split(path)
+		nombreCompleto := ruta + nombreArchivo
+
+		var cmd *exec.Cmd
+		if nombreExtension == ".pdf" {
+			cmd = exec.Command("dot", "-Tps", ruta+nombreGV, "-o", nombreCompleto)
+		} else {
+			cmd = exec.Command("dot", "-Tpng", ruta+nombreGV, "-o", nombreCompleto)
+		}
+		cmdOutput := &bytes.Buffer{}
+		cmd.Stdout = cmdOutput
+		err := cmd.Run()
+		if err != nil {
+			os.Stderr.WriteString(err.Error())
+		}
+		fmt.Print(string(cmdOutput.Bytes()))
+	}
+}
+
+//ReporteBitmapArboldirectorio = Genera el reporte de bitmap de Arbol de Directorios
+func ReporteBitmapArboldirectorio(id, path string) {
+	PathID, NombreParticion, ExisteID := existeID(id) //Path, nombre particion, bool si existe
+	var cadenaReporteBitmap string = ""
+	var start int64
+
+	if ExisteID == true {
+		mbr := leerMBR(PathID)
+		var nombreAByte16 [16]byte
+		copy(nombreAByte16[:], NombreParticion)
+		if mbr.MbrPartition1.PartName == nombreAByte16 {
+			start = mbr.MbrPartition1.PartStart
+		} else if mbr.MbrPartition2.PartName == nombreAByte16 {
+			start = mbr.MbrPartition1.PartStart
+		} else if mbr.MbrPartition3.PartName == nombreAByte16 {
+			start = mbr.MbrPartition1.PartStart
+		} else if mbr.MbrPartition4.PartName == nombreAByte16 {
+			start = mbr.MbrPartition1.PartStart
+		}
+		//**********************************************************************
+		//Se inicia la declaracion de variables para llenar el arreglo de bitmap
+		//**********************************************************************
+		sb := leerSB(PathID, start)
+		longitudBitmap := sb.SbArbolVirtualCount
+		bitmapArbolVirtualDirectorio := make([]byte, longitudBitmap)
+		contador := 0
+		for i := 0; i < len(bitmapArbolVirtualDirectorio); i++ {
+			cadenaReporteBitmap += strconv.Itoa(int(bitmapArbolVirtualDirectorio[i]))
+			if contador == 20 {
+				cadenaReporteBitmap += "\n"
+				contador = 0
+			} else {
+				cadenaReporteBitmap += "   "
+				contador++
+			}
+		}
+		crearArchivoParaReporteBitmap(path, cadenaReporteBitmap)
+	}
+}
+
+//ReporteBitmapDetalleDirectorio = Genera el reporte de bitmap de Detalle Directorio
+func ReporteBitmapDetalleDirectorio(id, path string) {
+	PathID, NombreParticion, ExisteID := existeID(id) //Path, nombre particion, bool si existe
+	var cadenaReporteBitmap string = ""
+	var start int64
+
+	if ExisteID == true {
+		mbr := leerMBR(PathID)
+		var nombreAByte16 [16]byte
+		copy(nombreAByte16[:], NombreParticion)
+		if mbr.MbrPartition1.PartName == nombreAByte16 {
+			start = mbr.MbrPartition1.PartStart
+		} else if mbr.MbrPartition2.PartName == nombreAByte16 {
+			start = mbr.MbrPartition1.PartStart
+		} else if mbr.MbrPartition3.PartName == nombreAByte16 {
+			start = mbr.MbrPartition1.PartStart
+		} else if mbr.MbrPartition4.PartName == nombreAByte16 {
+			start = mbr.MbrPartition1.PartStart
+		}
+		//**********************************************************************
+		//Se inicia la declaracion de variables para llenar el arreglo de bitmap
+		//**********************************************************************
+		sb := leerSB(PathID, start)
+		longitudBitmap := sb.SbDetalleDirectorioCount
+		bitmapDetalleDirectorio := make([]byte, longitudBitmap)
+		contador := 0
+		for i := 0; i < len(bitmapDetalleDirectorio); i++ {
+			cadenaReporteBitmap += strconv.Itoa(int(bitmapDetalleDirectorio[i]))
+			if contador == 20 {
+				cadenaReporteBitmap += "\n"
+				contador = 0
+			} else {
+				cadenaReporteBitmap += "   "
+				contador++
+			}
+		}
+		crearArchivoParaReporteBitmap(path, cadenaReporteBitmap)
+	}
+}
+
 //crearArchivoParaReporte = Metodo que almacena la informacion en el archivo .dot o .svg (segun sea el caso)
 //Primer parametro de retorno = retorna el nombre con la extension adecuada para generar el reporte en PDF o PNG, etc...
 //Segundo parametro de retorno = regresa la extension, para saber que comando ejectura en el sistema
@@ -1735,4 +2157,31 @@ func crearArchivoParaReporte(path, cadena string) (string, string) {
 		}
 	}
 	return nombreGV, extension
+}
+
+//crearArchivoParaReporteBitmap = Metodo que se encarga de escribir un .TXT con el contenido de los bitmap
+func crearArchivoParaReporteBitmap(path, cadena string) {
+	ruta, nombreArchivo := filepath.Split(path)
+	//Ruta: /home/user/xxxx
+	//Nombre Archivo: yyy.go
+	var extension = filepath.Ext(nombreArchivo)                       //.go
+	var nombre = nombreArchivo[0 : len(nombreArchivo)-len(extension)] //yyy
+	nombre += ".txt"
+
+	if ExisteCarpeta(ruta) == false {
+		CrearCarpeta(ruta)
+	}
+	if ExisteCarpeta(ruta) == true {
+		//Se genera el archivo .gv (para uso de graphvz)
+		file, err := os.Create(ruta + nombre)
+		if err != nil {
+			fmt.Println(err)
+		}
+		defer file.Close()
+		//Se escribe la informacion en el archivo
+		err2 := ioutil.WriteFile(ruta+nombre, []byte(cadena), 0644)
+		if err2 != nil {
+			log.Fatal(err2)
+		}
+	}
 }
