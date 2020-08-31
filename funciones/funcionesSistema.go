@@ -409,7 +409,7 @@ func FuncionMKFS(vector []string) {
 		if unitOpcional == false {
 			parametros[3] = "K"
 		}
-		metodos.FormateLWH(parametros[0])
+		metodos.FormateLWH(parametros[0], parametros[1])
 	} else {
 		fmt.Println(red + "[ERROR]" + reset + "Los parametros de " + magenta + "MKFS" + reset + " obligatorios no han sido completamente ingresados")
 	}
@@ -501,9 +501,13 @@ func FuncionREP(vector []string) {
 		} else if parametros[0] == "SB" {
 			metodos.ReporteSB(parametros[2], parametros[1])
 		} else if parametros[0] == "BM_ARBDIR" {
-			metodos.ReporteBitmapArboldirectorio(parametros[2], parametros[1])
+			metodos.ReporteBitmap(parametros[2], parametros[1], 1)
 		} else if parametros[0] == "BM_DETDIR" {
-			metodos.ReporteBitmapArboldirectorio(parametros[2], parametros[1])
+			metodos.ReporteBitmap(parametros[2], parametros[1], 2)
+		} else if parametros[0] == "BM_INODE" {
+			metodos.ReporteBitmap(parametros[2], parametros[1], 3)
+		} else if parametros[0] == "BM_BLOCK" {
+			metodos.ReporteBitmap(parametros[2], parametros[1], 4)
 		}
 	} else {
 		fmt.Println(red + "[ERROR]" + reset + "Los parametros de " + magenta + "REP" + reset + " obligatorios no han sido completamente ingresados")

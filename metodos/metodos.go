@@ -202,6 +202,46 @@ func leerSB(path string, start int64) SUPERBOOT {
 	return sb
 }
 
+func leerBitmapResumen(path string, start int64, sb *SUPERBOOT) string {
+	var cadena string
+	fmt.Println(path)
+	file, err := os.OpenFile(path, os.O_RDWR, 0755)
+	defer file.Close()
+	if err != nil {
+		fmt.Println(red + "[ERROR]" + reset + "No se ha podido abrir el archivo")
+	}
+
+	file.Seek(start, 0)
+	fmt.Println("start: ", start)
+
+	longitudBitmap := sb.SbArbolVirtualCount
+	bitmapArbolVirtualDirectorio := make([]byte, longitudBitmap)
+
+	data := leerBytes(file, int(sb.SbArbolVirtualCount))
+	buffer := bytes.NewBuffer(data)
+	err2 := binary.Read(buffer, binary.BigEndian, bitmapArbolVirtualDirectorio)
+	if err2 != nil {
+		fmt.Println(err2)
+	}
+
+	contador := 0
+	cadena += "| "
+	for i := 0; i < len(bitmapArbolVirtualDirectorio); i++ {
+		fmt.Println(strconv.Atoi(string(bitmapArbolVirtualDirectorio[i])))
+		caracter, _ := strconv.Atoi(string(bitmapArbolVirtualDirectorio[i]))
+		cadena += strconv.Itoa(caracter)
+		if contador == 20 {
+			cadena += "\n| "
+			contador = 0
+		} else {
+			cadena += " | "
+			contador++
+		}
+	}
+
+	return cadena
+}
+
 func escribirBytes(file *os.File, bytes []byte) {
 	_, error := file.Write(bytes)
 	if error != nil {
@@ -307,7 +347,7 @@ type SUPERBOOT struct {
 
 //ARBOLVIRTUALDIRECTORIO es el struct que contiene el arbol virtual de directorio
 type ARBOLVIRTUALDIRECTORIO struct {
-	AvdFechaCreacion            [20]byte
+	AvdFechaCreacion            [19]byte
 	AvdNombreDirectorio         [16]byte
 	AvdApArraySubdirectorios    [6]int64
 	AvdApDetalleDirectorio      int64
@@ -325,8 +365,8 @@ type DETALLEDIRECTORIO struct {
 type SUBDETALLEDIRECTORIO struct {
 	DdFileNombre           [16]byte
 	DdFileApInodo          int64
-	DdFileDateCreacion     [20]byte
-	DdFileDateModificacion [20]byte
+	DdFileDateCreacion     [19]byte
+	DdFileDateModificacion [19]byte
 }
 
 //TABLAINODO =
@@ -1293,7 +1333,7 @@ func DesmontarParticion(idParticion string) {
 //-------------------------------------------------------------------------------------------------------------------------------------------
 
 //FormateLWH =
-func FormateLWH(id string) {
+func FormateLWH(id, tipoFormateo string) {
 	path, nameParticion, Existe := existeID(id)
 	mbr := leerMBR(path)
 	var sb SUPERBOOT
@@ -1316,6 +1356,30 @@ func FormateLWH(id string) {
 			tamParticion = mbr.MbrPartition4.PartSize
 			start = mbr.MbrPartition4.PartStart
 		}
+
+		//********************************************************
+		//Se abre el Archivo
+		//********************************************************
+		file, err := os.OpenFile(path, os.O_RDWR, 0755)
+		defer file.Close()
+		if err != nil {
+			fmt.Println(red + "[ERROR]" + reset + "No se ha podido abrir el archivo")
+		}
+
+		//********************************************************
+		//Se realiza el formateo si es de tipo FULL
+		//********************************************************
+		if tipoFormateo == "FULL" {
+			//Se reescribe con 0's toda la particion
+			file.Seek(start, 0)
+			for i := 0; i < int(tamParticion); i++ {
+				numero := byte(0)
+				var valorBinario bytes.Buffer
+				binary.Write(&valorBinario, binary.BigEndian, &numero)
+				escribirBytes(file, valorBinario.Bytes())
+			}
+		}
+
 		fmt.Println(cyan+"Tamaño Particion: "+reset, tamParticion)
 		tamSuperBoot := int64(binary.Size(SUPERBOOT{}))
 		fmt.Println("Tamaño Super Boot: ", tamSuperBoot)
@@ -1332,10 +1396,21 @@ func FormateLWH(id string) {
 		numEstructuras := numeroDeEstructuras(tamParticion, tamSuperBoot, tamArbolVirtualDirectorio, tamDetalleDirectorio, tamTablaInodo, tamBloqueDatos, tamBitacora)
 		fmt.Println(red+"Numero de Estructuras: "+reset, numEstructuras)
 
+		if numEstructuras == 0 {
+			fmt.Println(red + "[ERROR]" + reset + "NO HAY ESPACIO SUFICIENTE PARA CREAR EL SISTEMA DE ARCHIVOS LWH")
+			return
+		}
+
 		bitmapArbolVirtualDirectorio := make([]byte, numEstructuras)
 		bitmapDetalleDirectorio := make([]byte, numEstructuras)
 		bitmapTablaInodos := make([]byte, numEstructuras)
 		bitmapBloqueDatos := make([]byte, numEstructuras)
+		for i := 0; i < int(numEstructuras); i++ {
+			bitmapArbolVirtualDirectorio[i] = '0'
+			bitmapDetalleDirectorio[i] = '0'
+			bitmapTablaInodos[i] = '0'
+			bitmapBloqueDatos[i] = '0'
+		}
 
 		fmt.Println("Bitmap Arbol Virtual: ", binary.Size(bitmapArbolVirtualDirectorio))
 		fmt.Println("Bitmap Detalle Directorio: ", binary.Size(bitmapDetalleDirectorio))
@@ -1353,6 +1428,9 @@ func FormateLWH(id string) {
 		var conversorTiempo [19]byte
 		copy(conversorTiempo[:], formatoTiempo)
 
+		//********************************************************
+		//Se llena el Super Boot
+		//********************************************************
 		sb.SbNombreHd = nombreDiscoAByte16
 		sb.SbArbolVirtualCount = numEstructuras
 		sb.SbDetalleDirectorioCount = numEstructuras
@@ -1385,15 +1463,7 @@ func FormateLWH(id string) {
 		sb.SbMagicNum = 201602694
 
 		//********************************************************
-		//Se abre el Archivo
-		//********************************************************
-		file, err := os.OpenFile(path, os.O_RDWR, 0755)
-		defer file.Close()
-		if err != nil {
-			fmt.Println(red + "[ERROR]" + reset + "No se ha podido abrir el archivo")
-		}
-		//********************************************************
-		//Se escribe el Super Boot
+		//Se escribe el Super Boot en el disco
 		//********************************************************
 		file.Seek(start, 0)
 		var binarioSuperBoot bytes.Buffer
@@ -1438,6 +1508,113 @@ func FormateLWH(id string) {
 			binary.Write(&valorBinario, binary.BigEndian, &numero0)
 			escribirBytes(file, valorBinario.Bytes())
 		}
+
+		//********************************************************
+		//Se prepara el arbol con el directorio raiz '/'
+		//Se escribe la raiz '/' y se actualiza el BITMAP
+		//********************************************************
+		var avd ARBOLVIRTUALDIRECTORIO
+		avd.AvdFechaCreacion = conversorTiempo
+		var nombreDirectorioRaiz [16]byte
+		nombreAByte16[0] = '/'
+		avd.AvdNombreDirectorio = nombreDirectorioRaiz
+		avd.AvdApArraySubdirectorios[0] = 0
+		avd.AvdApArraySubdirectorios[1] = 0
+		avd.AvdApArraySubdirectorios[2] = 0
+		avd.AvdApArraySubdirectorios[3] = 0
+		avd.AvdApArraySubdirectorios[4] = 0
+		avd.AvdApArraySubdirectorios[5] = 0
+		avd.AvdApDetalleDirectorio = 1
+		avd.AvdApArbolVirtualDirectorio = 777
+		avd.AvdProper[0] = '7'
+		avd.AvdProper[1] = '7'
+		avd.AvdProper[2] = '7'
+		//Se posiciona en el inicio del Arbol Directorio, ya que como es la carpeta raiz, va en la primer posicion
+		file.Seek(sb.SbApArbolDirectorio, 0)
+		var valorBinarioArbolDirectorio bytes.Buffer
+		binary.Write(&valorBinarioArbolDirectorio, binary.BigEndian, &avd)
+		escribirBytes(file, valorBinarioArbolDirectorio.Bytes())
+		//Se procese a actualizar el bitmap
+		bitmapArbolVirtualDirectorio[0] = '1'
+		reescribirBitmap(file, sb.SbApBitmapArbolDirectorio, bitmapArbolVirtualDirectorio)
+		//********************************************************
+		//Se prepara el DETALLE DIRECTORIO para user.txt
+		//Se escribe el DD y se actualiza el BITMAP
+		//********************************************************
+		var dd DETALLEDIRECTORIO
+		var nombreArchivoUserTXT [16]byte
+		nombreArchivoUserTXT[0] = 'u'
+		dd.DdArrayFiles[0].DdFileNombre = nombreArchivoUserTXT
+		dd.DdArrayFiles[0].DdFileApInodo = 1
+		dd.DdArrayFiles[0].DdFileDateCreacion = conversorTiempo
+		dd.DdArrayFiles[0].DdFileDateModificacion = conversorTiempo
+		dd.DdApDetalleDirectorio = 0
+		//Se posiciona en el inicio del Detalle Directorio, ya que como es el archivo user.txt, va en la primer posicion
+		file.Seek(sb.SbApDetalleDirectorio, 0)
+		var valorBinarioDetalleDirectorio bytes.Buffer
+		binary.Write(&valorBinarioDetalleDirectorio, binary.BigEndian, &dd)
+		escribirBytes(file, valorBinarioDetalleDirectorio.Bytes())
+		//Se procese a actualizar el bitmap
+		bitmapDetalleDirectorio[0] = '1'
+		reescribirBitmap(file, sb.SbApBitmapDetalleDirectorio, bitmapDetalleDirectorio)
+		//********************************************************
+		//Se prepara el INODO para user.txt
+		//Se escribe el INODO y se actualiza el BITMAP
+		//********************************************************
+		var inodo TABLAINODO
+		inodo.ICountInodo = 1
+		inodo.ISizeArchivo = tamBloqueDatos * 2
+		inodo.ICountBloquesAsignados = 2 //Se coloca 2 ya que la cadena inicial es mayor a 25 caracteres pero menor a 50
+		inodo.IArrayBloques[0] = 1
+		inodo.IArrayBloques[1] = 1
+		inodo.IArrayBloques[2] = 0
+		inodo.IArrayBloques[3] = 0
+		inodo.IApIndirecto = 0
+		inodo.IIdProper[0] = '7'
+		inodo.IIdProper[1] = '7'
+		inodo.IIdProper[2] = '7'
+		//Se posiciona en el inicio del Detalle Directorio, ya que como es el archivo user.txt, va en la primer posicion
+		file.Seek(sb.SbApTablaInodo, 0)
+		var valorBinarioTablaInodo bytes.Buffer
+		binary.Write(&valorBinarioTablaInodo, binary.BigEndian, &inodo)
+		escribirBytes(file, valorBinarioTablaInodo.Bytes())
+		//Se procese a actualizar el bitmap
+		bitmapTablaInodos[0] = '1'
+		reescribirBitmap(file, sb.SbApBitmapTablaInodo, bitmapTablaInodos)
+		//********************************************************
+		//Se prepara el BLOQUE del archivo user.txt
+		//Se escribe el user.txt y se actualiza el BITMAP
+		//********************************************************
+		var bloque BLOQUEDATOS
+		contLongitud := 0
+		var contCuantoBloquesVan int64 = 0
+		cadenaUserTxt := "1,G,root\\n1,U,root,root,201602694\\n"
+		for i := 0; i < len(cadenaUserTxt); i++ {
+			bloque.DbDato[contLongitud] = cadenaUserTxt[i]
+			if contLongitud == 24 {
+				//Se escribe el bloque lleno
+				fmt.Println(sb.SbApBloques + (tamBloqueDatos * contCuantoBloquesVan))
+				file.Seek(sb.SbApBloques+(tamBloqueDatos*contCuantoBloquesVan), 0)
+				var valorBinarioBloque bytes.Buffer
+				binary.Write(&valorBinarioBloque, binary.BigEndian, &bloque)
+				escribirBytes(file, valorBinarioBloque.Bytes())
+				//Se reinicia el bloque ya que ya se agrego el completo
+				var reinicio BLOQUEDATOS
+				bloque = reinicio
+				contLongitud = -1
+				contCuantoBloquesVan++
+			} else if i == len(cadenaUserTxt)-1 {
+				//Se escribe el bloque lleno
+				file.Seek(sb.SbApBloques+(tamBloqueDatos*contCuantoBloquesVan), 0)
+				var valorBinarioBloque bytes.Buffer
+				binary.Write(&valorBinarioBloque, binary.BigEndian, &bloque)
+				escribirBytes(file, valorBinarioBloque.Bytes())
+			}
+			contLongitud++
+		}
+		bitmapBloqueDatos[0] = '1'
+		bitmapBloqueDatos[1] = '1'
+		reescribirBitmap(file, sb.SbApBitmapBloques, bitmapBloqueDatos)
 	}
 
 	//v := numeroDeEstructuras()
@@ -1445,6 +1622,28 @@ func FormateLWH(id string) {
 	fmt.Println(path)
 	fmt.Println(nameParticion)
 	fmt.Println(mbr.MbrTamano)
+}
+
+//leerBitmap = Metodo que devuelve un arreglos de []byte con el contenido del bitmap especificado
+func retornarBitmap(file *os.File, start int64, sb SUPERBOOT) []byte {
+	file.Seek(start, 0)
+	longitudBitmap := sb.SbArbolVirtualCount
+	bitmapResultado := make([]byte, longitudBitmap)
+
+	data := leerBytes(file, int(sb.SbArbolVirtualCount))
+	buffer := bytes.NewBuffer(data)
+	err2 := binary.Read(buffer, binary.BigEndian, bitmapResultado)
+	if err2 != nil {
+		fmt.Println(err2)
+	}
+	return bitmapResultado
+}
+
+func reescribirBitmap(file *os.File, start int64, arreglo []byte) {
+	file.Seek(start, 0)
+	var valorBinario bytes.Buffer
+	binary.Write(&valorBinario, binary.BigEndian, &arreglo)
+	escribirBytes(file, valorBinario.Bytes())
 }
 
 //-------------------------------------------------------------------------------------------------------------------------------------------
@@ -2043,8 +2242,8 @@ func ReporteSB(id, path string) {
 	}
 }
 
-//ReporteBitmapArboldirectorio = Genera el reporte de bitmap de Arbol de Directorios
-func ReporteBitmapArboldirectorio(id, path string) {
+//ReporteBitmap = Genera el reporte de bitmap de Arbol de Directorios
+func ReporteBitmap(id, path string, tipoReporte int) {
 	PathID, NombreParticion, ExisteID := existeID(id) //Path, nombre particion, bool si existe
 	var cadenaReporteBitmap string = ""
 	var start int64
@@ -2064,60 +2263,21 @@ func ReporteBitmapArboldirectorio(id, path string) {
 		}
 		//**********************************************************************
 		//Se inicia la declaracion de variables para llenar el arreglo de bitmap
+		//segun sea el tipo de reporte especificado
 		//**********************************************************************
+		//TIPO 1: es el reporte del ARBOL VIRTUAL DE DIRECTORIO
+		//TIPO 2: es el reporte del DETALLE DE DIRECTORIO
+		//TIPO 3: es el reporte de la TABLA DE INODOS
+		//TIPO 4: es el reporte de los BLOQUES
 		sb := leerSB(PathID, start)
-		longitudBitmap := sb.SbArbolVirtualCount
-		bitmapArbolVirtualDirectorio := make([]byte, longitudBitmap)
-		contador := 0
-		for i := 0; i < len(bitmapArbolVirtualDirectorio); i++ {
-			cadenaReporteBitmap += strconv.Itoa(int(bitmapArbolVirtualDirectorio[i]))
-			if contador == 20 {
-				cadenaReporteBitmap += "\n"
-				contador = 0
-			} else {
-				cadenaReporteBitmap += "   "
-				contador++
-			}
-		}
-		crearArchivoParaReporteBitmap(path, cadenaReporteBitmap)
-	}
-}
-
-//ReporteBitmapDetalleDirectorio = Genera el reporte de bitmap de Detalle Directorio
-func ReporteBitmapDetalleDirectorio(id, path string) {
-	PathID, NombreParticion, ExisteID := existeID(id) //Path, nombre particion, bool si existe
-	var cadenaReporteBitmap string = ""
-	var start int64
-
-	if ExisteID == true {
-		mbr := leerMBR(PathID)
-		var nombreAByte16 [16]byte
-		copy(nombreAByte16[:], NombreParticion)
-		if mbr.MbrPartition1.PartName == nombreAByte16 {
-			start = mbr.MbrPartition1.PartStart
-		} else if mbr.MbrPartition2.PartName == nombreAByte16 {
-			start = mbr.MbrPartition1.PartStart
-		} else if mbr.MbrPartition3.PartName == nombreAByte16 {
-			start = mbr.MbrPartition1.PartStart
-		} else if mbr.MbrPartition4.PartName == nombreAByte16 {
-			start = mbr.MbrPartition1.PartStart
-		}
-		//**********************************************************************
-		//Se inicia la declaracion de variables para llenar el arreglo de bitmap
-		//**********************************************************************
-		sb := leerSB(PathID, start)
-		longitudBitmap := sb.SbDetalleDirectorioCount
-		bitmapDetalleDirectorio := make([]byte, longitudBitmap)
-		contador := 0
-		for i := 0; i < len(bitmapDetalleDirectorio); i++ {
-			cadenaReporteBitmap += strconv.Itoa(int(bitmapDetalleDirectorio[i]))
-			if contador == 20 {
-				cadenaReporteBitmap += "\n"
-				contador = 0
-			} else {
-				cadenaReporteBitmap += "   "
-				contador++
-			}
+		if tipoReporte == 1 {
+			cadenaReporteBitmap = leerBitmapResumen(PathID, sb.SbApBitmapArbolDirectorio, &sb)
+		} else if tipoReporte == 2 {
+			cadenaReporteBitmap = leerBitmapResumen(PathID, sb.SbApBitmapDetalleDirectorio, &sb)
+		} else if tipoReporte == 3 {
+			cadenaReporteBitmap = leerBitmapResumen(PathID, sb.SbApBitmapTablaInodo, &sb)
+		} else if tipoReporte == 4 {
+			cadenaReporteBitmap = leerBitmapResumen(PathID, sb.SbApBitmapBloques, &sb)
 		}
 		crearArchivoParaReporteBitmap(path, cadenaReporteBitmap)
 	}
