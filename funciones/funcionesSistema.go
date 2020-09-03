@@ -419,6 +419,44 @@ func FuncionMKFS(vector []string) {
 //-------------------------------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------------------------------
+//LOGIN-----LOGIN-----FUNCIONES-----FUNCIONES-----LOGIN-----LOGIN-----FUNCIONES-----FUNCIONES-----LOGIN-----LOGIN-----FUNCIONES-----FUNCIONES
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+
+//FuncionLOGIN =
+func FuncionLOGIN(vector []string) {
+	var parametros [3]string //[0]usr   [1]pwd	[2]id
+	var vecAuxiliar []string = nil
+	usrObligatorio := false
+	pwdObligatorio := false
+	idObligatorio := false
+
+	for j := 1; j < len(vector); j++ {
+		vecAuxiliar = strings.SplitN(vector[j], "->", -1)
+		if strings.ToLower(vecAuxiliar[0]) == "-usr" {
+			parametros[0] = vecAuxiliar[1]
+			usrObligatorio = true
+		} else if strings.ToLower(vecAuxiliar[0]) == "-pwd" {
+			parametros[1] = vecAuxiliar[1]
+			pwdObligatorio = true
+		} else if strings.ToLower(vecAuxiliar[0]) == "-id" {
+			parametros[2] = vecAuxiliar[1]
+			idObligatorio = true
+		}
+	}
+	if usrObligatorio == true && pwdObligatorio == true && idObligatorio == true {
+		metodos.Login(parametros[0], parametros[1], parametros[2])
+	} else {
+		fmt.Println(red + "[ERROR]" + reset + "Los parametros de " + magenta + "LOGIN" + reset + " obligatorios no han sido completamente ingresados")
+	}
+}
+
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
 //REP-----REP-----FUNCIONES-----FUNCIONES-----REP-----REP-----FUNCIONES-----FUNCIONES-----REP-----REP-----FUNCIONES-----FUNCIONES-----REP----
 //-------------------------------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------------------------------
@@ -508,6 +546,8 @@ func FuncionREP(vector []string) {
 			metodos.ReporteBitmap(parametros[2], parametros[1], 3)
 		} else if parametros[0] == "BM_BLOCK" {
 			metodos.ReporteBitmap(parametros[2], parametros[1], 4)
+		} else if parametros[0] == "TREE_COMPLETE" {
+			metodos.ReporteTreeComplete(parametros[2], parametros[1])
 		}
 	} else {
 		fmt.Println(red + "[ERROR]" + reset + "Los parametros de " + magenta + "REP" + reset + " obligatorios no han sido completamente ingresados")

@@ -202,6 +202,62 @@ func leerSB(path string, start int64) SUPERBOOT {
 	return sb
 }
 
+func leerAVD(file *os.File, start int64) ARBOLVIRTUALDIRECTORIO {
+	var avdRecuperacion ARBOLVIRTUALDIRECTORIO
+	var tamanoEnBytes int = int(binary.Size(avdRecuperacion))
+
+	file.Seek(start, 0)
+	data := leerBytes(file, tamanoEnBytes)
+	buffer := bytes.NewBuffer(data)
+	err := binary.Read(buffer, binary.BigEndian, &avdRecuperacion)
+	if err != nil {
+		fmt.Println(err)
+	}
+	return avdRecuperacion
+}
+
+func leerDD(file *os.File, start int64) DETALLEDIRECTORIO {
+	var ddRecuperacion DETALLEDIRECTORIO
+	var tamanoEnBytes int = int(binary.Size(ddRecuperacion))
+
+	file.Seek(start, 0)
+	data := leerBytes(file, tamanoEnBytes)
+	buffer := bytes.NewBuffer(data)
+	err := binary.Read(buffer, binary.BigEndian, &ddRecuperacion)
+	if err != nil {
+		fmt.Println(err)
+	}
+	return ddRecuperacion
+}
+
+func leerTABLAINODO(file *os.File, start int64) TABLAINODO {
+	var inodoRecuperacion TABLAINODO
+	var tamanoEnBytes int = int(binary.Size(inodoRecuperacion))
+
+	file.Seek(start, 0)
+	data := leerBytes(file, tamanoEnBytes)
+	buffer := bytes.NewBuffer(data)
+	err := binary.Read(buffer, binary.BigEndian, &inodoRecuperacion)
+	if err != nil {
+		fmt.Println(err)
+	}
+	return inodoRecuperacion
+}
+
+func leerBLOQUEDATOS(file *os.File, start int64) BLOQUEDATOS {
+	var bdRecuperacion BLOQUEDATOS
+	var tamanoEnBytes int = int(binary.Size(bdRecuperacion))
+
+	file.Seek(start, 0)
+	data := leerBytes(file, tamanoEnBytes)
+	buffer := bytes.NewBuffer(data)
+	err := binary.Read(buffer, binary.BigEndian, &bdRecuperacion)
+	if err != nil {
+		fmt.Println(err)
+	}
+	return bdRecuperacion
+}
+
 func leerBitmapResumen(path string, start int64, sb *SUPERBOOT) string {
 	var cadena string
 	fmt.Println(path)
@@ -227,7 +283,7 @@ func leerBitmapResumen(path string, start int64, sb *SUPERBOOT) string {
 	contador := 0
 	cadena += "| "
 	for i := 0; i < len(bitmapArbolVirtualDirectorio); i++ {
-		fmt.Println(strconv.Atoi(string(bitmapArbolVirtualDirectorio[i])))
+		//fmt.Println(strconv.Atoi(string(bitmapArbolVirtualDirectorio[i])))
 		caracter, _ := strconv.Atoi(string(bitmapArbolVirtualDirectorio[i]))
 		cadena += strconv.Itoa(caracter)
 		if contador == 20 {
@@ -392,6 +448,14 @@ type BITACORA struct {
 	LogContenido     byte
 	LogFecha         [20]byte
 }
+
+//SESIONACTIVA =
+type SESIONACTIVA struct {
+	usuario string
+}
+
+//SesionActiva = Es un struct GLOBAL que almacena la sesion activa, para saber si en realidad
+var SesionActiva SESIONACTIVA
 
 //-------------------------------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------------------------------
@@ -1335,13 +1399,13 @@ func DesmontarParticion(idParticion string) {
 //FormateLWH =
 func FormateLWH(id, tipoFormateo string) {
 	path, nameParticion, Existe := existeID(id)
-	mbr := leerMBR(path)
 	var sb SUPERBOOT
 	var tamParticion int64 = 0
 	var nombreAByte16 [16]byte
 	var start int64
 
 	if Existe == true {
+		mbr := leerMBR(path)
 		copy(nombreAByte16[:], nameParticion)
 		if mbr.MbrPartition1.PartName == nombreAByte16 {
 			tamParticion = mbr.MbrPartition1.PartSize
@@ -1380,6 +1444,9 @@ func FormateLWH(id, tipoFormateo string) {
 			}
 		}
 
+		//********************************************************
+		//Se obtienen los tamaños de los Struct
+		//********************************************************
 		fmt.Println(cyan+"Tamaño Particion: "+reset, tamParticion)
 		tamSuperBoot := int64(binary.Size(SUPERBOOT{}))
 		fmt.Println("Tamaño Super Boot: ", tamSuperBoot)
@@ -1461,7 +1528,6 @@ func FormateLWH(id, tipoFormateo string) {
 		sb.SbFirstFreeBitTablaInodo = 0
 		sb.SbFirstFreeBitBloques = 0
 		sb.SbMagicNum = 201602694
-
 		//********************************************************
 		//Se escribe el Super Boot en el disco
 		//********************************************************
@@ -1516,7 +1582,7 @@ func FormateLWH(id, tipoFormateo string) {
 		var avd ARBOLVIRTUALDIRECTORIO
 		avd.AvdFechaCreacion = conversorTiempo
 		var nombreDirectorioRaiz [16]byte
-		nombreAByte16[0] = '/'
+		nombreDirectorioRaiz[0] = '/'
 		avd.AvdNombreDirectorio = nombreDirectorioRaiz
 		avd.AvdApArraySubdirectorios[0] = 0
 		avd.AvdApArraySubdirectorios[1] = 0
@@ -1525,7 +1591,7 @@ func FormateLWH(id, tipoFormateo string) {
 		avd.AvdApArraySubdirectorios[4] = 0
 		avd.AvdApArraySubdirectorios[5] = 0
 		avd.AvdApDetalleDirectorio = 1
-		avd.AvdApArbolVirtualDirectorio = 777
+		avd.AvdApArbolVirtualDirectorio = 0
 		avd.AvdProper[0] = '7'
 		avd.AvdProper[1] = '7'
 		avd.AvdProper[2] = '7'
@@ -1543,7 +1609,10 @@ func FormateLWH(id, tipoFormateo string) {
 		//********************************************************
 		var dd DETALLEDIRECTORIO
 		var nombreArchivoUserTXT [16]byte
-		nombreArchivoUserTXT[0] = 'u'
+		usertxt := "user.txt"
+		var nombreUserTXTAByte16 [16]byte
+		copy(nombreUserTXTAByte16[:], usertxt)
+		nombreArchivoUserTXT = nombreUserTXTAByte16
 		dd.DdArrayFiles[0].DdFileNombre = nombreArchivoUserTXT
 		dd.DdArrayFiles[0].DdFileApInodo = 1
 		dd.DdArrayFiles[0].DdFileDateCreacion = conversorTiempo
@@ -1566,7 +1635,7 @@ func FormateLWH(id, tipoFormateo string) {
 		inodo.ISizeArchivo = tamBloqueDatos * 2
 		inodo.ICountBloquesAsignados = 2 //Se coloca 2 ya que la cadena inicial es mayor a 25 caracteres pero menor a 50
 		inodo.IArrayBloques[0] = 1
-		inodo.IArrayBloques[1] = 1
+		inodo.IArrayBloques[1] = 2
 		inodo.IArrayBloques[2] = 0
 		inodo.IArrayBloques[3] = 0
 		inodo.IApIndirecto = 0
@@ -1616,12 +1685,6 @@ func FormateLWH(id, tipoFormateo string) {
 		bitmapBloqueDatos[1] = '1'
 		reescribirBitmap(file, sb.SbApBitmapBloques, bitmapBloqueDatos)
 	}
-
-	//v := numeroDeEstructuras()
-
-	fmt.Println(path)
-	fmt.Println(nameParticion)
-	fmt.Println(mbr.MbrTamano)
 }
 
 //leerBitmap = Metodo que devuelve un arreglos de []byte con el contenido del bitmap especificado
@@ -1644,6 +1707,92 @@ func reescribirBitmap(file *os.File, start int64, arreglo []byte) {
 	var valorBinario bytes.Buffer
 	binary.Write(&valorBinario, binary.BigEndian, &arreglo)
 	escribirBytes(file, valorBinario.Bytes())
+}
+
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//LOGIN-----LOGIN-----METODOS-----METODOS-----LOGIN-----LOGIN-----METODOS-----METODOS-----LOGIN-----LOGIN-----METODOS-----METODOS-----LOGIN--
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+
+//Login = metodo que verifica la existencia del usuario y contraseña en el archivo user.txt
+func Login(usr, pwd, id string) {
+	if SesionActiva.usuario != "" {
+		fmt.Println(red + "[ERROR]" + reset + "Ya se encuentra una sesion activa!!")
+	} else {
+		pathParticion, nameParticion, Existe := existeID(id)
+		var nombreAByte16 [16]byte
+		var start int64
+
+		if Existe == true {
+			mbr := leerMBR(pathParticion)
+			copy(nombreAByte16[:], nameParticion)
+			if mbr.MbrPartition1.PartName == nombreAByte16 {
+				start = mbr.MbrPartition1.PartStart
+			} else if mbr.MbrPartition2.PartName == nombreAByte16 {
+				start = mbr.MbrPartition2.PartStart
+			} else if mbr.MbrPartition3.PartName == nombreAByte16 {
+				start = mbr.MbrPartition3.PartStart
+			} else if mbr.MbrPartition4.PartName == nombreAByte16 {
+				start = mbr.MbrPartition4.PartStart
+			}
+			//********************************************************
+			//Se abre el Archivo
+			//********************************************************
+			file, err := os.OpenFile(pathParticion, os.O_RDWR, 0755)
+			defer file.Close()
+			if err != nil {
+				fmt.Println(red + "[ERROR]" + reset + "No se ha podido abrir el archivo")
+			}
+			//********************************************************
+			//Se retorna el contenido del archivo users.txt
+			//********************************************************
+			sb := leerSB(pathParticion, start)
+			numEstructuraTreeComplete = 0
+			CadenaRetornoUserTXT = ""
+			recorrerArbolRecursivoRetornarUsersTxt(file, sb, 3)
+			fmt.Println(cyan + "Cadena USERS.TXT: " + reset + CadenaRetornoUserTXT)
+			//********************************************************
+			//Se separa el contenido (SPLIT)
+			//********************************************************
+			cadenaDivididaSlashN := strings.SplitN(CadenaRetornoUserTXT, "\\n", -1)
+			tamCadena := len(cadenaDivididaSlashN)
+			for i := 0; i < tamCadena; i++ {
+				cadenaDivididaComas := strings.SplitN(cadenaDivididaSlashN[i], ",", -1)
+				if cadenaDivididaComas[0] == "1" && cadenaDivididaComas[1] == "U" {
+					if cadenaDivididaComas[3] == usr && cadenaDivididaComas[4] == pwd {
+						SesionActiva.usuario = usr
+						fmt.Println(green + "[EXITO]" + reset + "Sesion iniciada con exito!")
+					}
+				}
+			}
+		}
+	}
+
+}
+
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//LOGOUT-----LOGOUT-----METODOS-----METODOS-----LOGOUT-----LOGOUT-----METODOS-----METODOS-----LOGOUT-----LOGOUT-----METODOS-----METODOS-----L
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+
+//FuncionLOGOUT = funcion encargada de salir de la sesion
+func FuncionLOGOUT() {
+	if SesionActiva.usuario == "" {
+		fmt.Println(red + "[ERROR]" + reset + "No se encuentra ninguna sesion activa")
+	} else {
+		SesionActiva.usuario = ""
+		fmt.Println(green + "[EXITO]" + reset + "Sesion cerrada con exito!")
+	}
 }
 
 //-------------------------------------------------------------------------------------------------------------------------------------------
@@ -2149,6 +2298,16 @@ func recorerParticionesLogicasReporte(path string, mbr MBR, queParticionExtendid
 	return cadena
 }
 
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//SUPERBOOT-----SUPERBOOT-----REPORTE-----REPORTE-----SUPERBOOT-----SUPERBOOT-----REPORTE-----REPORTE-----SUPERBOOT-----SUPERBOOT-----REPORTE
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+
 //ReporteSB = Genera el reporte del Super Boot
 func ReporteSB(id, path string) {
 	PathID, NombreParticion, ExisteID := existeID(id) //Path, nombre particion, bool si existe
@@ -2242,6 +2401,16 @@ func ReporteSB(id, path string) {
 	}
 }
 
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//BITMAP-----BITMAP-----REPORTE-----REPORTE-----BITMAP-----BITMAP-----REPORTE-----REPORTE-----BITMAP-----BITMAP-----REPORTE-----REPORTE------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+
 //ReporteBitmap = Genera el reporte de bitmap de Arbol de Directorios
 func ReporteBitmap(id, path string, tipoReporte int) {
 	PathID, NombreParticion, ExisteID := existeID(id) //Path, nombre particion, bool si existe
@@ -2280,6 +2449,241 @@ func ReporteBitmap(id, path string, tipoReporte int) {
 			cadenaReporteBitmap = leerBitmapResumen(PathID, sb.SbApBitmapBloques, &sb)
 		}
 		crearArchivoParaReporteBitmap(path, cadenaReporteBitmap)
+	}
+}
+
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//ARBOL-----ARBOL-----REPORTE-----REPORTE-----ARBOL-----ARBOL-----REPORTE-----REPORTE-----ARBOL-----ARBOL-----REPORTE-----REPORTE-----ARBOL--
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+
+//ReporteTreeComplete = Metodo que crea el reporte del arbol completo
+func ReporteTreeComplete(id, path string) {
+	PathID, NombreParticion, ExisteID := existeID(id) //Path, nombre particion, bool si existe
+	//var cadenaReporteTreeComplete string = ""
+	var start int64
+
+	if ExisteID == true {
+		mbr := leerMBR(PathID)
+		var nombreAByte16 [16]byte
+		copy(nombreAByte16[:], NombreParticion)
+		if mbr.MbrPartition1.PartName == nombreAByte16 {
+			start = mbr.MbrPartition1.PartStart
+		} else if mbr.MbrPartition2.PartName == nombreAByte16 {
+			start = mbr.MbrPartition1.PartStart
+		} else if mbr.MbrPartition3.PartName == nombreAByte16 {
+			start = mbr.MbrPartition1.PartStart
+		} else if mbr.MbrPartition4.PartName == nombreAByte16 {
+			start = mbr.MbrPartition1.PartStart
+		}
+		sb := leerSB(PathID, start)
+
+		//Se abre el archivo para su uso
+		file, err := os.OpenFile(PathID, os.O_RDWR, 0755)
+		defer file.Close()
+		if err != nil {
+			fmt.Println(red + "[ERROR]" + reset + "No se ha podido abrir el archivo")
+		}
+
+		//**********************************************************************
+		//Se preparan los bitmap para saber como moverse en el archivo
+		//**********************************************************************
+		bitmapArbolVirtualDirectorio := retornarBitmap(file, sb.SbApBitmapArbolDirectorio, sb)
+		fmt.Println(bitmapArbolVirtualDirectorio)
+		bitmapDetalleDirectorio := retornarBitmap(file, sb.SbApBitmapDetalleDirectorio, sb)
+		fmt.Println(bitmapDetalleDirectorio)
+		bitmapTablaInodos := retornarBitmap(file, sb.SbApBitmapTablaInodo, sb)
+		fmt.Println(bitmapTablaInodos)
+		bitmapBloques := retornarBitmap(file, sb.SbApBitmapBloques, sb)
+		fmt.Println(bitmapBloques)
+
+		//**********************************************************************
+		//Se preparan los tamaños de los archivos
+		//**********************************************************************
+		//tamSuperBoot := int64(binary.Size(SUPERBOOT{}))
+		//tamArbolVirtualDirectorio := sb.SbSizeStructArbolDirectorio
+		//tamDetalleDirectorio := sb.SbSizeStructDetalleDirectorio
+		//tamTablaInodo := sb.SbSizeStructInodo
+		//tamBloqueDatos := sb.SbSizeStructBloque
+		var cadenaReporteTreeComplete string
+		if bitmapArbolVirtualDirectorio[0] == '1' {
+			cadenaReporteTreeComplete = "digraph MBR {\nnode [shape=plaintext]\nrankdir=LR;\n"
+			//aDondeVoy := sb.SbApArbolDirectorio
+			subCadenaReporteTreeComplete = ""
+			numEstructuraTreeComplete = 0
+			recorrerArbolRecursivoReporte(file, sb, 1)
+			cadenaReporteTreeComplete += subCadenaReporteTreeComplete
+			cadenaReporteTreeComplete += "}"
+			fmt.Println(red + "------------" + reset)
+			numEstructuraTreeComplete = 0
+			recorrerArbolRecursivo(file, sb, 1)
+			//******************************************************************
+			//Se escribe la cadena en el archivo .svg que usara Graphviz
+			//******************************************************************
+			nombreGV, nombreExtension := crearArchivoParaReporte(path, cadenaReporteTreeComplete)
+			//******************************************************************
+			//Aca se genera el la imagen, pdf segun sea ingresada
+			//******************************************************************
+			//cmd := exec.Command("dot", "-Tps", "/home/javier/Imágenes/graph1.gv", "-o", "/home/javier/Imágenes/gra.pdf")
+			ruta, nombreArchivo := filepath.Split(path)
+			nombreCompleto := ruta + nombreArchivo
+
+			var cmd *exec.Cmd
+			if nombreExtension == ".pdf" {
+				cmd = exec.Command("dot", "-Tps", ruta+nombreGV, "-o", nombreCompleto)
+			} else {
+				cmd = exec.Command("dot", "-Tpng", ruta+nombreGV, "-o", nombreCompleto)
+			}
+			cmdOutput := &bytes.Buffer{}
+			cmd.Stdout = cmdOutput
+			err := cmd.Run()
+			if err != nil {
+				os.Stderr.WriteString(err.Error())
+			}
+			fmt.Print(string(cmdOutput.Bytes()))
+		}
+	}
+	//leerBitmapResumen(path, )
+}
+
+var subCadenaReporteTreeComplete string
+var numEstructuraTreeComplete int64 = 0
+
+func recorrerArbolRecursivoReporte(file *os.File, sb SUPERBOOT, tipoArchivo int) {
+	//Se empieza a recorrer desde root '/'
+	if tipoArchivo == 1 { //CUANDO ES TIPO ARBOL DE DIRECTORIO
+		avd := leerAVD(file, sb.SbApArbolDirectorio+(sb.SbSizeStructArbolDirectorio*numEstructuraTreeComplete))
+		subCadenaReporteTreeComplete += "AVD" + strconv.FormatInt(numEstructuraTreeComplete+1, 10) + "[label=<\n<TABLE BORDER='0' CELLBORDER='1' CELLSPACING='0'>\n"
+		var nombreDirectorio string
+		for i1, valor1 := range avd.AvdNombreDirectorio {
+			if avd.AvdNombreDirectorio[i1] != 0 {
+				nombreDirectorio += string(valor1)
+			}
+		}
+		subCadenaReporteTreeComplete += "<TR port='0'>\n<TD BGCOLOR='#99ccff' COLSPAN='2'><font color='black'>" + nombreDirectorio + "</font></TD>\n</TR>\n"
+		subCadenaReporteTreeComplete += "<TR>\n<TD BGCOLOR='#99ccff'>Fecha Creacion</TD><TD>" + string(avd.AvdFechaCreacion[:]) + "</TD>\n</TR>\n"
+		subCadenaReporteTreeComplete += "<TR>\n<TD BGCOLOR='#99ccff'>APD 1</TD><TD port='1'>" + strconv.FormatInt(avd.AvdApArraySubdirectorios[0], 10) + "</TD>\n</TR>\n"
+		subCadenaReporteTreeComplete += "<TR>\n<TD BGCOLOR='#99ccff'>APD 2</TD><TD port='2'>" + strconv.FormatInt(avd.AvdApArraySubdirectorios[1], 10) + "</TD>\n</TR>\n"
+		subCadenaReporteTreeComplete += "<TR>\n<TD BGCOLOR='#99ccff'>APD 3</TD><TD port='3'>" + strconv.FormatInt(avd.AvdApArraySubdirectorios[2], 10) + "</TD>\n</TR>\n"
+		subCadenaReporteTreeComplete += "<TR>\n<TD BGCOLOR='#99ccff'>APD 4</TD><TD port='4'>" + strconv.FormatInt(avd.AvdApArraySubdirectorios[3], 10) + "</TD>\n</TR>\n"
+		subCadenaReporteTreeComplete += "<TR>\n<TD BGCOLOR='#99ccff'>APD 5</TD><TD port='5'>" + strconv.FormatInt(avd.AvdApArraySubdirectorios[4], 10) + "</TD>\n</TR>\n"
+		subCadenaReporteTreeComplete += "<TR>\n<TD BGCOLOR='#99ccff'>APD 6</TD><TD port='6'>" + strconv.FormatInt(avd.AvdApArraySubdirectorios[5], 10) + "</TD>\n</TR>\n"
+		subCadenaReporteTreeComplete += "<TR>\n<TD BGCOLOR='#99ccff'>Detalle Directorio</TD><TD port='7'>" + strconv.FormatInt(avd.AvdApDetalleDirectorio, 10) + "</TD>\n</TR>\n"
+		subCadenaReporteTreeComplete += "<TR>\n<TD BGCOLOR='#99ccff'>APDI 1</TD><TD port='8'>" + strconv.FormatInt(avd.AvdApArbolVirtualDirectorio, 10) + "</TD>\n</TR>\n"
+		subCadenaReporteTreeComplete += "<TR>\n<TD BGCOLOR='#99ccff'>PROPER</TD><TD>" + string(avd.AvdProper[:]) + "</TD>\n</TR>\n"
+		subCadenaReporteTreeComplete += "</TABLE>\n>];\n\n"
+
+		for i := 0; i < 8; i++ {
+			if i < 6 && avd.AvdApArraySubdirectorios[i] != 0 {
+				fmt.Println("[TIPO1]pos ", i, ":", avd.AvdNombreDirectorio)
+				subCadenaReporteTreeComplete += "AVD" + strconv.FormatInt(numEstructuraTreeComplete+1, 10) + ":" + strconv.Itoa(i+1) + " -> "
+				numEstructuraTreeComplete = avd.AvdApArraySubdirectorios[i]
+				subCadenaReporteTreeComplete += "AVD:" + strconv.FormatInt(numEstructuraTreeComplete, 10) + "\n"
+				numEstructuraTreeComplete--
+				recorrerArbolRecursivoReporte(file, sb, 1)
+			} else if i == 6 && avd.AvdApDetalleDirectorio != 0 {
+				fmt.Println("[TIPO1]pos ", i, ":", avd.AvdApDetalleDirectorio)
+				subCadenaReporteTreeComplete += "AVD" + strconv.FormatInt(numEstructuraTreeComplete+1, 10) + ":" + strconv.Itoa(i+1) + " -> "
+				numEstructuraTreeComplete = avd.AvdApDetalleDirectorio
+				subCadenaReporteTreeComplete += "DD" + strconv.FormatInt(numEstructuraTreeComplete, 10) + "\n"
+				//aDondeVoy = sb.SbApDetalleDirectorio + (sb.SbSizeStructDetalleDirectorio * numEstructura)
+				numEstructuraTreeComplete--
+				recorrerArbolRecursivoReporte(file, sb, 2)
+			} else if i == 7 && avd.AvdApArbolVirtualDirectorio != 0 {
+				fmt.Println("[TIPO1]pos ", i, ":", avd.AvdApArbolVirtualDirectorio)
+				subCadenaReporteTreeComplete += "AVD" + strconv.FormatInt(numEstructuraTreeComplete+1, 10) + ":" + strconv.Itoa(i+1) + " -> "
+				numEstructuraTreeComplete = avd.AvdApArbolVirtualDirectorio
+				subCadenaReporteTreeComplete += "AVD:" + strconv.FormatInt(numEstructuraTreeComplete, 10) + "\n"
+				numEstructuraTreeComplete--
+				recorrerArbolRecursivoReporte(file, sb, 1)
+			}
+		}
+	} else if tipoArchivo == 2 { //CUANDO ES TIPO DETALLE DIRECTORIO
+		dd := leerDD(file, sb.SbApDetalleDirectorio+(sb.SbSizeStructDetalleDirectorio*numEstructuraTreeComplete))
+		subCadenaReporteTreeComplete += "\nDD" + strconv.FormatInt(numEstructuraTreeComplete+1, 10) + "[label=<\n<TABLE BORDER='0' CELLBORDER='1' CELLSPACING='0'>\n"
+		subCadenaReporteTreeComplete += "<TR>\n<TD BGCOLOR='#a3d977'>DETALLE<br/>DIRECTORIO</TD><TD BGCOLOR='#a3d977'>" + strconv.FormatInt(numEstructuraTreeComplete+1, 10) + "</TD>\n</TR>"
+		for i := 0; i < 5; i++ {
+			if dd.DdArrayFiles[i].DdFileApInodo != 0 {
+				var nombreDirectorio string
+				for i1, valor1 := range dd.DdArrayFiles[i].DdFileNombre {
+					if dd.DdArrayFiles[i].DdFileNombre[i1] != 0 {
+						nombreDirectorio += string(valor1)
+					}
+				}
+				subCadenaReporteTreeComplete += "<TR>\n<TD BGCOLOR='#a3d977'>" + nombreDirectorio + "</TD><TD port='1'>" + strconv.FormatInt(dd.DdArrayFiles[i].DdFileApInodo, 10) + "</TD>\n</TR>\n"
+			} else {
+				subCadenaReporteTreeComplete += "<TR>\n<TD BGCOLOR='#a3d977'>APD" + strconv.Itoa(i+1) + "</TD><TD port='" + strconv.Itoa(i+1) + "'>-1</TD>\n</TR>\n"
+			}
+		}
+		subCadenaReporteTreeComplete += "<TR>\n<TD BGCOLOR='#a3d977'>API1</TD><TD port='6'>" + strconv.FormatInt(dd.DdApDetalleDirectorio, 10) + "</TD>\n</TR>\n"
+		subCadenaReporteTreeComplete += "</TABLE>\n>];\n\n"
+		for i := 0; i < 6; i++ {
+			if i < 5 && dd.DdArrayFiles[i].DdFileApInodo != 0 {
+				fmt.Println("[TIPO2]pos ", i, ":", dd.DdArrayFiles[i].DdFileApInodo)
+				subCadenaReporteTreeComplete += "DD" + strconv.FormatInt(numEstructuraTreeComplete+1, 10) + ":" + strconv.Itoa(i+1) + " -> "
+				numEstructuraTreeComplete = dd.DdArrayFiles[i].DdFileApInodo
+				subCadenaReporteTreeComplete += "TI" + strconv.FormatInt(numEstructuraTreeComplete, 10) + "\n"
+				//aDondeVoy = sb.SbApDetalleDirectorio + (sb.SbSizeStructDetalleDirectorio * numEstructura)
+				numEstructuraTreeComplete--
+				recorrerArbolRecursivoReporte(file, sb, 3)
+			} else if i == 5 && dd.DdApDetalleDirectorio != 0 {
+				fmt.Println("[TIPO2]pos ", i, ":", dd.DdApDetalleDirectorio)
+				subCadenaReporteTreeComplete += "DD" + strconv.FormatInt(numEstructuraTreeComplete+1, 10) + ":" + strconv.Itoa(i+1) + " -> "
+				numEstructuraTreeComplete = dd.DdApDetalleDirectorio
+				subCadenaReporteTreeComplete += "DD:" + strconv.FormatInt(numEstructuraTreeComplete, 10) + "\n"
+				numEstructuraTreeComplete--
+				recorrerArbolRecursivoReporte(file, sb, 2)
+			}
+		}
+
+	} else if tipoArchivo == 3 { //CUANDO ES TIPO TABLA INODO
+		ti := leerTABLAINODO(file, sb.SbApTablaInodo+(sb.SbSizeStructInodo*numEstructuraTreeComplete))
+		subCadenaReporteTreeComplete += "\nTI" + strconv.FormatInt(numEstructuraTreeComplete+1, 10) + " [label=<\n<TABLE BORDER='0' CELLBORDER='1' CELLSPACING='0'>\n"
+		subCadenaReporteTreeComplete += "<TR>\n<TD BGCOLOR='#ffc374'>TABLA INODO</TD><TD BGCOLOR='#ffc374'>" + strconv.FormatInt(numEstructuraTreeComplete+1, 10) + "</TD>\n</TR>\n"
+		subCadenaReporteTreeComplete += "<TR>\n<TD BGCOLOR='#ffc374'>Tamaño</TD><TD>" + strconv.FormatInt(ti.ISizeArchivo, 10) + "</TD>\n</TR>\n"
+		subCadenaReporteTreeComplete += "<TR>\n<TD BGCOLOR='#ffc374'>Bloques</TD><TD>" + strconv.FormatInt(ti.ICountInodo, 10) + "</TD>\n</TR>\n"
+		subCadenaReporteTreeComplete += "<TR>\n<TD BGCOLOR='#ffc374'>APD 1</TD><TD port='1'>" + strconv.FormatInt(ti.IArrayBloques[0], 10) + "</TD>\n</TR>\n"
+		subCadenaReporteTreeComplete += "<TR>\n<TD BGCOLOR='#ffc374'>APD 2</TD><TD port='2'>" + strconv.FormatInt(ti.IArrayBloques[1], 10) + "</TD>\n</TR>\n"
+		subCadenaReporteTreeComplete += "<TR>\n<TD BGCOLOR='#ffc374'>APD 3</TD><TD port='3'>" + strconv.FormatInt(ti.IArrayBloques[2], 10) + "</TD>\n</TR>\n"
+		subCadenaReporteTreeComplete += "<TR>\n<TD BGCOLOR='#ffc374'>APD 4</TD><TD port='4'>" + strconv.FormatInt(ti.IArrayBloques[3], 10) + "</TD>\n</TR>\n"
+		subCadenaReporteTreeComplete += "<TR>\n<TD BGCOLOR='#ffc374'>API</TD><TD port='5'>" + strconv.FormatInt(ti.IApIndirecto, 10) + "</TD>\n</TR>\n"
+		subCadenaReporteTreeComplete += "<TR>\n<TD BGCOLOR='#ffc374'>Proper</TD><TD port='5'>" + string(ti.IIdProper[:]) + "</TD>\n</TR>\n"
+		subCadenaReporteTreeComplete += "</TABLE>\n>];\n\n"
+		for i := 0; i < 5; i++ {
+			if i < 4 && ti.IArrayBloques[i] != 0 {
+				fmt.Println("[TIPO3]pos ", i, ",", numEstructuraTreeComplete, ":", ti.IArrayBloques[i])
+				subCadenaReporteTreeComplete += "TI" + strconv.FormatInt(numEstructuraTreeComplete+1, 10) + ":" + strconv.Itoa(i+1) + " -> "
+				numEstructuraTreeComplete = ti.IArrayBloques[i]
+				subCadenaReporteTreeComplete += "B" + strconv.FormatInt(numEstructuraTreeComplete, 10) + "\n"
+				numEstructuraTreeComplete--
+				recorrerArbolRecursivoReporte(file, sb, 4)
+			} else if i == 4 && ti.IApIndirecto != 0 {
+				fmt.Println("[TIPO3]pos ", i, ":", ti.IArrayBloques[i])
+				subCadenaReporteTreeComplete += "TI" + strconv.FormatInt(numEstructuraTreeComplete+1, 10) + ":" + strconv.Itoa(i+1) + " -> "
+				numEstructuraTreeComplete = ti.IApIndirecto
+				subCadenaReporteTreeComplete += "TI:" + strconv.FormatInt(numEstructuraTreeComplete, 10) + "\n"
+				numEstructuraTreeComplete--
+				recorrerArbolRecursivoReporte(file, sb, 3)
+			}
+		}
+	} else if tipoArchivo == 4 { //CUANDO ES TIPO BLOQUE DE DATOS
+		bd := leerBLOQUEDATOS(file, sb.SbApBloques+(sb.SbSizeStructBloque*numEstructuraTreeComplete))
+		subCadenaReporteTreeComplete += "\nB" + strconv.FormatInt(numEstructuraTreeComplete+1, 10) + "[label=<\n\n<TABLE BORDER='0' CELLBORDER='1' CELLSPACING='0'>\n"
+		subCadenaReporteTreeComplete += "<TR>\n<TD BGCOLOR='#ff8f80'>BLOQUE</TD><TD BGCOLOR='#ff8f80'>1</TD>\n</TR>\n"
+		var contenidoBloque string
+		for i1, valor1 := range bd.DbDato {
+			if bd.DbDato[i1] != 0 {
+				contenidoBloque += string(valor1)
+			}
+		}
+		subCadenaReporteTreeComplete += "<TR>\n<TD COLSPAN='2'>" + contenidoBloque + "</TD>\n</TR>\n"
+		subCadenaReporteTreeComplete += "</TABLE>\n>];\n\n"
+		fmt.Println("[TIPO4]pos: ", string(bd.DbDato[:]))
 	}
 }
 
@@ -2343,5 +2747,102 @@ func crearArchivoParaReporteBitmap(path, cadena string) {
 		if err2 != nil {
 			log.Fatal(err2)
 		}
+	}
+}
+
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//ARBOL-----ARBOL-----ARBOL-----ARBOL-----ARBOL-----ARBOL-----ARBOL-----ARBOL-----ARBOL-----ARBOL-----ARBOL-----ARBOL-----ARBOL-----ARBOL----
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+
+func recorrerArbolRecursivo(file *os.File, sb SUPERBOOT, tipoArchivo int) {
+	//Se empieza a recorrer desde root '/'
+	if tipoArchivo == 1 { //CUANDO ES TIPO ARBOL DE DIRECTORIO
+		avd := leerAVD(file, sb.SbApArbolDirectorio+(sb.SbSizeStructArbolDirectorio*numEstructuraTreeComplete))
+
+		for i := 0; i < 8; i++ {
+			if i < 6 && avd.AvdApArraySubdirectorios[i] != 0 {
+				fmt.Println("[TIPO1]pos ", i, ":", avd.AvdNombreDirectorio)
+				numEstructuraTreeComplete = avd.AvdApArraySubdirectorios[i]
+				numEstructuraTreeComplete--
+				recorrerArbolRecursivoReporte(file, sb, 1)
+			} else if i == 6 && avd.AvdApDetalleDirectorio != 0 {
+				fmt.Println("[TIPO1]pos ", i, ":", avd.AvdApDetalleDirectorio)
+				numEstructuraTreeComplete = avd.AvdApDetalleDirectorio
+				numEstructuraTreeComplete--
+				recorrerArbolRecursivoReporte(file, sb, 2)
+			} else if i == 7 && avd.AvdApArbolVirtualDirectorio != 0 {
+				fmt.Println("[TIPO1]pos ", i, ":", avd.AvdApArbolVirtualDirectorio)
+				numEstructuraTreeComplete = avd.AvdApArbolVirtualDirectorio
+				numEstructuraTreeComplete--
+				recorrerArbolRecursivoReporte(file, sb, 1)
+			}
+		}
+	} else if tipoArchivo == 2 { //CUANDO ES TIPO DETALLE DIRECTORIO
+		dd := leerDD(file, sb.SbApDetalleDirectorio+(sb.SbSizeStructDetalleDirectorio*numEstructuraTreeComplete))
+		for i := 0; i < 6; i++ {
+			if i < 5 && dd.DdArrayFiles[i].DdFileApInodo != 0 {
+				fmt.Println("[TIPO2]pos ", i, ":", dd.DdArrayFiles[i].DdFileApInodo)
+				numEstructuraTreeComplete = dd.DdArrayFiles[i].DdFileApInodo
+				numEstructuraTreeComplete--
+				recorrerArbolRecursivoReporte(file, sb, 3)
+			} else if i == 5 && dd.DdApDetalleDirectorio != 0 {
+				fmt.Println("[TIPO2]pos ", i, ":", dd.DdApDetalleDirectorio)
+				numEstructuraTreeComplete = dd.DdApDetalleDirectorio
+				numEstructuraTreeComplete--
+				recorrerArbolRecursivoReporte(file, sb, 2)
+			}
+		}
+
+	} else if tipoArchivo == 3 { //CUANDO ES TIPO TABLA INODO
+		ti := leerTABLAINODO(file, sb.SbApTablaInodo+(sb.SbSizeStructInodo*numEstructuraTreeComplete))
+		for i := 0; i < 5; i++ {
+			if i < 4 && ti.IArrayBloques[i] != 0 {
+				fmt.Println("[TIPO3]pos ", i, ",", numEstructuraTreeComplete, ":", ti.IArrayBloques[i])
+				numEstructuraTreeComplete = ti.IArrayBloques[i]
+				numEstructuraTreeComplete--
+				recorrerArbolRecursivoReporte(file, sb, 4)
+			} else if i == 4 && ti.IApIndirecto != 0 {
+				fmt.Println("[TIPO3]pos ", i, ":", ti.IArrayBloques[i])
+				numEstructuraTreeComplete = ti.IApIndirecto
+				numEstructuraTreeComplete--
+				recorrerArbolRecursivoReporte(file, sb, 3)
+			}
+		}
+	} else if tipoArchivo == 4 { //CUANDO ES TIPO BLOQUE DE DATOS
+		bd := leerBLOQUEDATOS(file, sb.SbApBloques+(sb.SbSizeStructBloque*numEstructuraTreeComplete))
+		fmt.Println("[TIPO4]pos: ", string(bd.DbDato[:]))
+	}
+}
+
+//CadenaRetornoUserTXT =
+var CadenaRetornoUserTXT string
+
+func recorrerArbolRecursivoRetornarUsersTxt(file *os.File, sb SUPERBOOT, tipoArchivo int) {
+	//Se empieza a recorrer desde el inodo del archivo USER.TXT que siempre sera el primer INODO
+	if tipoArchivo == 3 { //CUANDO ES TIPO TABLA INODO
+		ti := leerTABLAINODO(file, sb.SbApTablaInodo+(sb.SbSizeStructInodo*numEstructuraTreeComplete))
+		for i := 0; i < 5; i++ {
+			if i < 4 && ti.IArrayBloques[i] != 0 {
+				fmt.Println("[TIPO3]pos ", i, ",", numEstructuraTreeComplete, ":", ti.IArrayBloques[i])
+				numEstructuraTreeComplete = ti.IArrayBloques[i]
+				numEstructuraTreeComplete--
+				recorrerArbolRecursivoRetornarUsersTxt(file, sb, 4)
+			} else if i == 4 && ti.IApIndirecto != 0 {
+				fmt.Println("[TIPO3]pos ", i, ":", ti.IArrayBloques[i])
+				numEstructuraTreeComplete = ti.IApIndirecto
+				numEstructuraTreeComplete--
+				recorrerArbolRecursivoRetornarUsersTxt(file, sb, 3)
+			}
+		}
+	} else if tipoArchivo == 4 { //CUANDO ES TIPO BLOQUE DE DATOS
+		bd := leerBLOQUEDATOS(file, sb.SbApBloques+(sb.SbSizeStructBloque*numEstructuraTreeComplete))
+		CadenaRetornoUserTXT += string(bd.DbDato[:])
+		fmt.Println("[TIPO4]pos: ", string(bd.DbDato[:]))
 	}
 }

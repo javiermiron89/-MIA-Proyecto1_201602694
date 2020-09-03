@@ -218,6 +218,12 @@ func Verificar_Tipo(cadenaOrdenada []string) {
 		} else if strings.ToLower(mamarre) == "mkfs" {
 			fmt.Println(yellow + "Palabra reservada a ejecutar: " + magenta + "MKFS" + reset)
 			funciones.FuncionMKFS(cadenaOrdenada)
+		} else if strings.ToLower(mamarre) == "login" {
+			fmt.Println(yellow + "Palabra reservada a ejecutar: " + magenta + "LOGIN" + reset)
+			funciones.FuncionLOGIN(cadenaOrdenada)
+		} else if strings.ToLower(mamarre) == "logout" {
+			fmt.Println(yellow + "Palabra reservada a ejecutar: " + magenta + "LOGOUT" + reset)
+			metodos.FuncionLOGOUT()
 		} else if strings.ToLower(mamarre) == "rep" {
 			fmt.Println(yellow + "Palabra reservada a ejecutar: " + magenta + "REP" + reset)
 			funciones.FuncionREP(cadenaOrdenada)
