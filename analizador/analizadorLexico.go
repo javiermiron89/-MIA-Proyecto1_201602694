@@ -227,6 +227,9 @@ func Verificar_Tipo(cadenaOrdenada []string) {
 		} else if strings.ToLower(mamarre) == "mkgrp" {
 			fmt.Println(yellow + "Palabra reservada a ejecutar: " + magenta + "MKGRP" + reset)
 			funciones.FuncionMKGRP(cadenaOrdenada)
+		} else if strings.ToLower(mamarre) == "mkusr" {
+			fmt.Println(yellow + "Palabra reservada a ejecutar: " + magenta + "MKUSR" + reset)
+			funciones.FuncionMKUSR(cadenaOrdenada)
 		} else if strings.ToLower(mamarre) == "rep" {
 			fmt.Println(yellow + "Palabra reservada a ejecutar: " + magenta + "REP" + reset)
 			funciones.FuncionREP(cadenaOrdenada)

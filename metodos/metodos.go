@@ -298,6 +298,47 @@ func leerBitmapResumen(path string, start int64, sb *SUPERBOOT) string {
 	return cadena
 }
 
+//leerBitmap = Metodo que devuelve un arreglos de []byte con el contenido del bitmap especificado
+func retornarBitmap(file *os.File, start int64, sb SUPERBOOT) []byte {
+	file.Seek(start, 0)
+	longitudBitmap := sb.SbArbolVirtualCount
+	bitmapResultado := make([]byte, longitudBitmap)
+
+	data := leerBytes(file, int(sb.SbArbolVirtualCount))
+	buffer := bytes.NewBuffer(data)
+	err2 := binary.Read(buffer, binary.BigEndian, bitmapResultado)
+	if err2 != nil {
+		fmt.Println(err2)
+	}
+	return bitmapResultado
+}
+
+func reescribirBitmap(file *os.File, start int64, arreglo []byte) {
+	file.Seek(start, 0)
+	var valorBinario bytes.Buffer
+	binary.Write(&valorBinario, binary.BigEndian, &arreglo)
+	escribirBytes(file, valorBinario.Bytes())
+}
+
+//SplitSubN = Metodo encargado de separa un string en subcadens
+func SplitSubN(s string, n int) []string {
+	sub := ""
+	subs := []string{}
+
+	runes := bytes.Runes([]byte(s))
+	l := len(runes)
+	for i, r := range runes {
+		sub = sub + string(r)
+		if (i+1)%n == 0 {
+			subs = append(subs, sub)
+			sub = ""
+		} else if (i + 1) == l {
+			subs = append(subs, sub)
+		}
+	}
+	return subs
+}
+
 func escribirBytes(file *os.File, bytes []byte) {
 	_, error := file.Write(bytes)
 	if error != nil {
@@ -1022,35 +1063,37 @@ func ActualizarMBREInsertarParticion(path string, mbr *MBR, numero byte) {
 	binary.Write(&binario3, binary.BigEndian, mbr)
 	escribirBytes(file, binario3.Bytes())
 
-	if numero == '1' {
-		file.Seek(mbr.MbrPartition1.PartStart, 0)
-		for i := 0; i < int(mbr.MbrPartition1.PartSize); i++ {
-			var valorBinario bytes.Buffer
-			binary.Write(&valorBinario, binary.BigEndian, &numero)
-			escribirBytes(file, valorBinario.Bytes())
+	/*
+		if numero == '1' {
+			file.Seek(mbr.MbrPartition1.PartStart, 0)
+			for i := 0; i < int(mbr.MbrPartition1.PartSize); i++ {
+				var valorBinario bytes.Buffer
+				binary.Write(&valorBinario, binary.BigEndian, &numero)
+				escribirBytes(file, valorBinario.Bytes())
+			}
+		} else if numero == '2' {
+			file.Seek(mbr.MbrPartition2.PartStart, 0)
+			for i := 0; i < int(mbr.MbrPartition2.PartSize); i++ {
+				var valorBinario bytes.Buffer
+				binary.Write(&valorBinario, binary.BigEndian, &numero)
+				escribirBytes(file, valorBinario.Bytes())
+			}
+		} else if numero == '3' {
+			file.Seek(mbr.MbrPartition3.PartStart, 0)
+			for i := 0; i < int(mbr.MbrPartition3.PartSize); i++ {
+				var valorBinario bytes.Buffer
+				binary.Write(&valorBinario, binary.BigEndian, &numero)
+				escribirBytes(file, valorBinario.Bytes())
+			}
+		} else if numero == '4' {
+			file.Seek(mbr.MbrPartition4.PartStart, 0)
+			for i := 0; i < int(mbr.MbrPartition4.PartSize); i++ {
+				var valorBinario bytes.Buffer
+				binary.Write(&valorBinario, binary.BigEndian, &numero)
+				escribirBytes(file, valorBinario.Bytes())
+			}
 		}
-	} else if numero == '2' {
-		file.Seek(mbr.MbrPartition2.PartStart, 0)
-		for i := 0; i < int(mbr.MbrPartition2.PartSize); i++ {
-			var valorBinario bytes.Buffer
-			binary.Write(&valorBinario, binary.BigEndian, &numero)
-			escribirBytes(file, valorBinario.Bytes())
-		}
-	} else if numero == '3' {
-		file.Seek(mbr.MbrPartition3.PartStart, 0)
-		for i := 0; i < int(mbr.MbrPartition3.PartSize); i++ {
-			var valorBinario bytes.Buffer
-			binary.Write(&valorBinario, binary.BigEndian, &numero)
-			escribirBytes(file, valorBinario.Bytes())
-		}
-	} else if numero == '4' {
-		file.Seek(mbr.MbrPartition4.PartStart, 0)
-		for i := 0; i < int(mbr.MbrPartition4.PartSize); i++ {
-			var valorBinario bytes.Buffer
-			binary.Write(&valorBinario, binary.BigEndian, &numero)
-			escribirBytes(file, valorBinario.Bytes())
-		}
-	}
+	*/
 }
 
 //CrearPrimerEBR = Funcion encargada de crear el 1er EBR
@@ -1687,28 +1730,6 @@ func FormateLWH(id, tipoFormateo string) {
 	}
 }
 
-//leerBitmap = Metodo que devuelve un arreglos de []byte con el contenido del bitmap especificado
-func retornarBitmap(file *os.File, start int64, sb SUPERBOOT) []byte {
-	file.Seek(start, 0)
-	longitudBitmap := sb.SbArbolVirtualCount
-	bitmapResultado := make([]byte, longitudBitmap)
-
-	data := leerBytes(file, int(sb.SbArbolVirtualCount))
-	buffer := bytes.NewBuffer(data)
-	err2 := binary.Read(buffer, binary.BigEndian, bitmapResultado)
-	if err2 != nil {
-		fmt.Println(err2)
-	}
-	return bitmapResultado
-}
-
-func reescribirBitmap(file *os.File, start int64, arreglo []byte) {
-	file.Seek(start, 0)
-	var valorBinario bytes.Buffer
-	binary.Write(&valorBinario, binary.BigEndian, &arreglo)
-	escribirBytes(file, valorBinario.Bytes())
-}
-
 //-------------------------------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------------------------------
@@ -1857,7 +1878,7 @@ func CrearGrupo(id, name string) {
 				cadenaDivididaComas := strings.SplitN(cadenaDivididaSlashN[i], ",", -1)
 				if cadenaDivididaComas[0] == "1" && cadenaDivididaComas[1] == "G" {
 					if cadenaDivididaComas[2] == name {
-						fmt.Println(red + "[ERROR]" + reset + "El usuario ya existe")
+						fmt.Println(red + "[ERROR]" + reset + "El grupo ya existe")
 						yaExisteGrupo = true
 						break
 					}
@@ -1874,225 +1895,119 @@ func CrearGrupo(id, name string) {
 			//Si no existe el usuario, se procede a crearlo
 			//********************************************************
 			if yaExisteGrupo == false {
-				//********************************************************
-				//Se carga el bitmap del inodo y bloques
-				//********************************************************
-				bitmapTablaInodos := retornarBitmap(file, sb.SbApBitmapTablaInodo, sb)
-				bitmapBloques := retornarBitmap(file, sb.SbApBitmapBloques, sb)
-				CadenaRetornoUserTXT += "1,G," + name + "\\n"
-				fmt.Println(cyan + "Cadena USERS.TXT Nueva: " + reset + CadenaRetornoUserTXT)
-				tamCadena = len(CadenaRetornoUserTXT)
-				//********************************************************
-				//Se reinician los arreglos de apuntadores, los cuales se
-				//encargaran de almacenar los apuntadores que estan en uso
-				//para poder reescribirlos luego
-				//********************************************************
-				ApuntadoresBloqueUsoUSERTXT = nil
-				ApuntadoresInodosUsoUSERTXT = nil
-				ApuntadoresInodosUsoUSERTXT = append(ApuntadoresInodosUsoUSERTXT, 1) //Se agrega el 1 ya que este siempre esta
-				numEstructuraTreeComplete = 0
-				recorrerArbolRecursivoRetornarApuntadoresUSERTXT(file, sb, 3)
-				fmt.Println(tamCadena)
-				fmt.Println(bitmapTablaInodos)
-				fmt.Println(bitmapBloques)
-				//********************************************************
-				//Se calculan cuantos bloques se usaran y se valida si hay
-				//espacio suficiente en el bitmap
-				//********************************************************
-				totalDeBloques := tamCadena / 25.0
-				restoBloques := tamCadena % 25.0
-				if restoBloques != 0 {
-					totalDeBloques++
-				}
-				totalDeBloquesNuevos := totalDeBloques - len(ApuntadoresBloqueUsoUSERTXT)
-				fmt.Println("Bloques nuevos: ", totalDeBloquesNuevos)
-				//var cuantosBloquesLibres int64
-				//var posicionBloquesLibres []int64
-				fmt.Println("Tamano Bitmap Bloques: ", len(bitmapBloques))
-				/*
-					for i := 0; i < len(bitmapBloques); i++ {
-						if bitmapBloques[i] == '0' {
-							cuantosBloquesLibres++
-							posicionBloquesLibres = append(posicionBloquesLibres, int64(i+1))
-						}
-					}
-				*/
-				//fmt.Println("Bloques libres: ", cuantosBloquesLibres)
-				//fmt.Println("Arreglo posiciones libres:", posicionBloquesLibres)
-				fmt.Println("Arreglo posiciones Uso: ", ApuntadoresBloqueUsoUSERTXT)
-				fmt.Println("Apuntadores bloques en uso: ", ApuntadoresBloqueUsoUSERTXT[:])
-				fmt.Println("Apuntadores indodos en uso: ", ApuntadoresInodosUsoUSERTXT[:])
-
-				var todasLasPosicionesAEscribirBloques []int64
-				todasLasPosicionesAEscribirBloques = append(todasLasPosicionesAEscribirBloques[:], ApuntadoresBloqueUsoUSERTXT[:]...)
-				contadorBloquesLibres := totalDeBloquesNuevos
-
-				if len(bitmapBloques) < totalDeBloquesNuevos {
-					fmt.Println(red + "[ERROR]" + reset + "No hay suficientes BLOQUES para insertar el grupo")
-				} else {
-					for i := 0; i < len(bitmapBloques); i++ {
-						if contadorBloquesLibres == 0 {
-							break
-						}
-						if bitmapBloques[i] == '0' {
-							todasLasPosicionesAEscribirBloques = append(todasLasPosicionesAEscribirBloques[:], int64(i+1))
-							contadorBloquesLibres--
-						}
-					}
-					fmt.Println(magenta + "TODAS LAS POSICIONES DE BLOQUES: " + reset)
-					fmt.Println(todasLasPosicionesAEscribirBloques)
-				}
-
-				//********************************************************
-				//Se calculan cuantos inodos se usaran y se valida si hay
-				//espacio suficiente en el bitmap
-				//********************************************************
-
-				totalDeInodos := totalDeBloques / 4
-				restoInodos := totalDeBloques % 4
-				if restoInodos != 0 {
-					totalDeInodos++
-				}
-				totalDeInodosNuevos := totalDeInodos - len(ApuntadoresInodosUsoUSERTXT)
-				fmt.Println("Total de inodos nuevos: ", totalDeInodosNuevos)
-
-				var todasLasPosicionesAEscribirInodos []int64
-				todasLasPosicionesAEscribirInodos = append(todasLasPosicionesAEscribirInodos[:], ApuntadoresInodosUsoUSERTXT[:]...)
-				contadorInodosLibres := totalDeInodosNuevos
-
-				if len(bitmapTablaInodos) < totalDeInodosNuevos {
-					fmt.Println(red + "[ERROR]" + reset + "No hay suficientes INODOS para insertar el grupo")
-				} else {
-					for i := 0; i < len(bitmapTablaInodos); i++ {
-						if contadorInodosLibres == 0 {
-							break
-						}
-						if bitmapTablaInodos[i] == '0' {
-							todasLasPosicionesAEscribirInodos = append(todasLasPosicionesAEscribirInodos[:], int64(i+1))
-							contadorInodosLibres--
-						}
-					}
-					fmt.Println(magenta + "TODAS LAS POSICIONES DE INODOS: " + reset)
-					fmt.Println(todasLasPosicionesAEscribirInodos)
-				}
-
-				//ti := leerTABLAINODO(file, sb.SbApTablaInodo+(sb.SbSizeStructInodo*numEstructuraTreeComplete))
-				//********************************************************
-				//Se escriben las nuevas estructuras
-				//********************************************************
-				fmt.Println("T: ", totalDeBloques)
-				contPosBloque := totalDeBloques
-				numPosBloque := 0
-				for i := 0; i < len(todasLasPosicionesAEscribirInodos); i++ {
-					var nuevoTI TABLAINODO
-					nuevoTI.ICountInodo = todasLasPosicionesAEscribirInodos[i]
-					nuevoTI.ISizeArchivo = int64(totalDeBloques) * sb.SbSizeStructInodo
-					nuevoTI.ICountBloquesAsignados = int64(totalDeBloques)
-					for j := 0; j < 4; j++ {
-						if contPosBloque != 0 {
-							nuevoTI.IArrayBloques[j] = todasLasPosicionesAEscribirBloques[numPosBloque]
-							numPosBloque++
-							contPosBloque--
-						}
-					}
-					if contPosBloque != 0 {
-						nuevoTI.IApIndirecto = todasLasPosicionesAEscribirInodos[i+1]
-					}
-					nuevoTI.IIdProper[0] = '7'
-					nuevoTI.IIdProper[1] = '7'
-					nuevoTI.IIdProper[2] = '7'
-					file.Seek(sb.SbApTablaInodo+(sb.SbSizeStructInodo*(todasLasPosicionesAEscribirInodos[i]-1)), 0)
-					var valorBinarioTablaInodo bytes.Buffer
-					binary.Write(&valorBinarioTablaInodo, binary.BigEndian, &nuevoTI)
-					escribirBytes(file, valorBinarioTablaInodo.Bytes())
-				}
-
-				cadenaUserTxtSeparada := SplitSubN(CadenaRetornoUserTXT, 25)
-				fmt.Println("mamarre VAMOS A BLOQUES")
-				fmt.Println("Longitud: ", len(todasLasPosicionesAEscribirBloques))
-
-				for i := 0; i < len(todasLasPosicionesAEscribirBloques); i++ {
-					var nuevoBD BLOQUEDATOS
-					var contenidoAByte25 [25]byte
-					copy(contenidoAByte25[:], cadenaUserTxtSeparada[i])
-					nuevoBD.DbDato = contenidoAByte25
-					//CadenaRetornoUserTXT
-					fmt.Println(string(contenidoAByte25[:]))
-					fmt.Println(todasLasPosicionesAEscribirBloques[i])
-					file.Seek(sb.SbApBloques+(sb.SbSizeStructBloque*(todasLasPosicionesAEscribirBloques[i]-1)), 0)
-					var valorBinarioBloque bytes.Buffer
-					binary.Write(&valorBinarioBloque, binary.BigEndian, &nuevoBD)
-					escribirBytes(file, valorBinarioBloque.Bytes())
-				}
-
-				//********************************************************
-				//Se escriben las nuevas estructuras
-				//********************************************************
-
-				nuevoBitmapTablaInodos := bitmapTablaInodos
-				for i := 0; i < len(todasLasPosicionesAEscribirInodos); i++ {
-					nuevoBitmapTablaInodos[todasLasPosicionesAEscribirInodos[i]-1] = '1'
-				}
-				fmt.Println(red, nuevoBitmapTablaInodos, reset)
-				reescribirBitmap(file, sb.SbApBitmapTablaInodo, nuevoBitmapTablaInodos)
-				nuevoBitmapBloques := bitmapBloques
-				for i := 0; i < len(todasLasPosicionesAEscribirBloques); i++ {
-					nuevoBitmapBloques[todasLasPosicionesAEscribirBloques[i]-1] = '1'
-				}
-				reescribirBitmap(file, sb.SbApBitmapBloques, nuevoBitmapBloques)
+				//	PARAMETRO 1 -> file: 		recibe el archivo
+				//	PARAMETRO 2 -> sb: 			una estructura SUPERBOOT
+				//	PARAMETRO 3 -> name:		recibe el nombre del GRUPO PARA USARLO EN GRUPO O USUARIO
+				//	PARAMETRO 3 -> usr: 		recibe el nombre del USUARIO PARA USARLO EN USUARIO
+				//	PARAMETRO 4 -> pwd: 		recibe el PASSWORD para el uso de la creacion del usuario
+				//	PARAMETRO 5 -> tamCadena:	variable int que en princio lleva el len de el arreglo que separa por '\n'
+				//  PARAMETRO 6 -> tipo:		1 indica que es grupo y 2 indica que es usuario
+				modificarUSERTXT(file, sb, name, "", "", tamCadena, 1)
 			}
 		}
 	}
 }
 
-//SplitSubN = Metodo encargado de separa un string en subcadens
-func SplitSubN(s string, n int) []string {
-	sub := ""
-	subs := []string{}
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//MKUSR-----MKUSR-----METODOS-----METODOS-----MKUSR-----MKUSR-----METODOS-----METODOS-----MKUSR-----MKUSR-----METODOS-----METODOS-----MKUSR--
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
 
-	runes := bytes.Runes([]byte(s))
-	l := len(runes)
-	for i, r := range runes {
-		sub = sub + string(r)
-		if (i+1)%n == 0 {
-			subs = append(subs, sub)
-			sub = ""
-		} else if (i + 1) == l {
-			subs = append(subs, sub)
-		}
-	}
+//CrearUser = metodo encargado de crear un nuevo grupo en el archivo user.txt
+func CrearUser(id, usr, pwd, grp string) {
+	if SesionActiva.usuario == "" {
+		fmt.Println(red + "[ERROR]" + reset + "No se encuentra ninguna sesion activa")
+	} else if SesionActiva.usuario != "root" {
+		fmt.Println(red + "[ERROR]" + reset + "La funcion " + cyan + "MKUSR" + reset + " unicamente puede ser ejecutada por el usuario root")
+	} else if SesionActiva.usuario == "root" {
+		pathParticion, nameParticion, Existe := existeID(id)
+		var nombreAByte16 [16]byte
+		var start int64
 
-	return subs
-}
+		if Existe == true {
+			mbr := leerMBR(pathParticion)
+			copy(nombreAByte16[:], nameParticion)
+			if mbr.MbrPartition1.PartName == nombreAByte16 {
+				start = mbr.MbrPartition1.PartStart
+			} else if mbr.MbrPartition2.PartName == nombreAByte16 {
+				start = mbr.MbrPartition2.PartStart
+			} else if mbr.MbrPartition3.PartName == nombreAByte16 {
+				start = mbr.MbrPartition3.PartStart
+			} else if mbr.MbrPartition4.PartName == nombreAByte16 {
+				start = mbr.MbrPartition4.PartStart
+			}
+			//********************************************************
+			//Se abre el Archivo
+			//********************************************************
+			file, err := os.OpenFile(pathParticion, os.O_RDWR, 0755)
+			defer file.Close()
+			if err != nil {
+				fmt.Println(red + "[ERROR]" + reset + "No se ha podido abrir el archivo")
+			}
+			//********************************************************
+			//Se retorna el contenido del archivo users.txt
+			//********************************************************
+			sb := leerSB(pathParticion, start)
+			numEstructuraTreeComplete = 0
+			CadenaRetornoUserTXT = ""
+			recorrerArbolRecursivoRetornarUsersTxt(file, sb, 3)
+			fmt.Println(cyan + "Cadena USERS.TXT: " + reset + CadenaRetornoUserTXT)
+			//********************************************************
+			//Se separa el contenido (SPLIT) y se verifica si el
+			//usuario ya existe
+			//********************************************************
+			cadenaDivididaSlashN := strings.SplitN(CadenaRetornoUserTXT, "\\n", -1)
+			tamCadena := len(cadenaDivididaSlashN)
+			yaExisteGrupo := false
+			yaExisteUsuario := false
+			for i := 0; i < tamCadena; i++ {
+				cadenaDivididaComas := strings.SplitN(cadenaDivididaSlashN[i], ",", -1)
+				if cadenaDivididaComas[0] == "1" && cadenaDivididaComas[1] == "G" {
+					if cadenaDivididaComas[2] == grp {
+						yaExisteGrupo = true
+						break
+					}
+				} else if cadenaDivididaComas[0] == "1" && cadenaDivididaComas[1] == "U" {
+					if cadenaDivididaComas[3] == usr {
+						fmt.Println(red + "[ERROR]" + reset + "El usuario " + cyan + usr + reset + " ya existe")
+						yaExisteUsuario = true
+					}
+				}
+			}
+			if yaExisteGrupo == false {
+				fmt.Println(red + "[ERROR]" + reset + "El grupo " + cyan + grp + reset + " no existe")
+			}
+			//********************************************************
+			//Se verifica primero si el usr y pwd no supera los 10 byte
+			//********************************************************
+			if len(usr) > 10 {
+				fmt.Println(red + "[ERROR]" + reset + "El nombre del usuario supera los 10 caracteres")
+				yaExisteGrupo = false
+			}
+			if len(pwd) > 10 {
+				fmt.Println(red + "[ERROR]" + reset + "El password supera los 10 caracteres")
+				yaExisteGrupo = false
+			}
+			//********************************************************
+			//Si no existe el usuario, se procede a crearlo
+			//********************************************************
+			if yaExisteGrupo == true && yaExisteUsuario == false {
+				//	PARAMETRO 1 -> file: 		recibe el archivo
+				//	PARAMETRO 2 -> sb: 			una estructura SUPERBOOT
+				//	PARAMETRO 3 -> name:		recibe el nombre del GRUPO PARA USARLO EN GRUPO O USUARIO
+				//	PARAMETRO 3 -> usr: 		recibe el nombre del USUARIO PARA USARLO EN USUARIO
+				//	PARAMETRO 4 -> pwd: 		recibe el PASSWORD para el uso de la creacion del usuario
+				//	PARAMETRO 5 -> tamCadena:	variable int que en princio lleva el len de el arreglo que separa por '\n'
+				//  PARAMETRO 6 -> tipo:		1 indica que es grupo y 2 indica que es usuario
+				modificarUSERTXT(file, sb, grp, usr, pwd, tamCadena, 2)
 
-//ApuntadoresBloqueUsoUSERTXT = Arreglo que almacena los apuntadores de tipo bloque que usa el archivo txt
-var ApuntadoresBloqueUsoUSERTXT []int64
-
-//ApuntadoresInodosUsoUSERTXT = Arreglo que almacena los apuntadores de tipo Inodo que usa el archivo txt
-var ApuntadoresInodosUsoUSERTXT []int64
-
-func recorrerArbolRecursivoRetornarApuntadoresUSERTXT(file *os.File, sb SUPERBOOT, tipoArchivo int) {
-	//Se empieza a recorrer desde el inodo del archivo USER.TXT que siempre sera el primer INODO
-	if tipoArchivo == 3 { //CUANDO ES TIPO TABLA INODO
-		ti := leerTABLAINODO(file, sb.SbApTablaInodo+(sb.SbSizeStructInodo*numEstructuraTreeComplete))
-		for i := 0; i < 5; i++ {
-			if i < 4 && ti.IArrayBloques[i] != 0 {
-				//fmt.Println("[TIPO3]pos ", i, ",", numEstructuraTreeComplete, ":", ti.IArrayBloques[i])
-				numEstructuraTreeComplete = ti.IArrayBloques[i]
-				ApuntadoresBloqueUsoUSERTXT = append(ApuntadoresBloqueUsoUSERTXT, ti.IArrayBloques[i])
-				numEstructuraTreeComplete--
-				//recorrerArbolRecursivoRetornarApuntadoresUSERTXT(file, sb, 4)
-			} else if i == 4 && ti.IApIndirecto != 0 {
-				//fmt.Println("[TIPO3]pos ", i, ":", ti.IArrayBloques[i])
-				numEstructuraTreeComplete = ti.IApIndirecto
-				ApuntadoresInodosUsoUSERTXT = append(ApuntadoresInodosUsoUSERTXT, ti.IApIndirecto)
-				numEstructuraTreeComplete--
-				recorrerArbolRecursivoRetornarApuntadoresUSERTXT(file, sb, 3)
 			}
 		}
-	} else if tipoArchivo == 4 { //CUANDO ES TIPO BLOQUE DE DATOS
-		//bd := leerBLOQUEDATOS(file, sb.SbApBloques+(sb.SbSizeStructBloque*numEstructuraTreeComplete))
-		//fmt.Println("[TIPO4]pos: ", string(bd.DbDato[:]))
 	}
 }
 
@@ -2981,7 +2896,7 @@ func recorrerArbolRecursivoReporte(file *os.File, sb SUPERBOOT, tipoArchivo int)
 	} else if tipoArchivo == 4 { //CUANDO ES TIPO BLOQUE DE DATOS
 		bd := leerBLOQUEDATOS(file, sb.SbApBloques+(sb.SbSizeStructBloque*numEstructuraTreeComplete))
 		subCadenaReporteTreeComplete += "\nB" + strconv.FormatInt(numEstructuraTreeComplete+1, 10) + "[label=<\n\n<TABLE BORDER='0' CELLBORDER='1' CELLSPACING='0'>\n"
-		subCadenaReporteTreeComplete += "<TR>\n<TD BGCOLOR='#ff8f80'>BLOQUE</TD><TD BGCOLOR='#ff8f80'>1</TD>\n</TR>\n"
+		subCadenaReporteTreeComplete += "<TR>\n<TD BGCOLOR='#ff8f80'>BLOQUE</TD><TD BGCOLOR='#ff8f80'>" + strconv.FormatInt(numEstructuraTreeComplete+1, 10) + "</TD>\n</TR>\n"
 		var contenidoBloque string
 		for i1, valor1 := range bd.DbDato {
 			if bd.DbDato[i1] != 0 {
@@ -3158,5 +3073,227 @@ func recorrerArbolRecursivoRetornarUsersTxt(file *os.File, sb SUPERBOOT, tipoArc
 		}
 		//CadenaRetornoUserTXT += string(bd.DbDato[:])
 		fmt.Println("[TIPO4]pos: ", string(bd.DbDato[:]))
+	}
+}
+
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//USER.TXT-----USER.TXT-----USER.TXT-----USER.TXT-----USER.TXT-----USER.TXT-----USER.TXT-----USER.TXT-----USER.TXT-----USER.TXT-----USER.TXT-
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+
+//modificarUSERTXT =
+//	PARAMETRO 1 -> file: 		recibe el archivo
+//	PARAMETRO 2 -> sb: 			una estructura SUPERBOOT
+//	PARAMETRO 3 -> name:		recibe el nombre del GRUPO PARA USARLO EN GRUPO O USUARIO
+//	PARAMETRO 3 -> usr: 		recibe el nombre del USUARIO PARA USARLO EN USUARIO
+//	PARAMETRO 4 -> pwd: 		recibe el PASSWORD para el uso de la creacion del usuario
+//	PARAMETRO 5 -> tamCadena:	variable int que en princio lleva el len de el arreglo que separa por '\n'
+//  PARAMETRO 6 -> tipo:		1 indica que es grupo y 2 indica que es usuario
+func modificarUSERTXT(file *os.File, sb SUPERBOOT, name, usr, pwd string, tamCadena, tipo int) {
+	//********************************************************
+	//Se carga el bitmap del inodo y bloques
+	//********************************************************
+	bitmapTablaInodos := retornarBitmap(file, sb.SbApBitmapTablaInodo, sb)
+	bitmapBloques := retornarBitmap(file, sb.SbApBitmapBloques, sb)
+	if tipo == 1 {
+		CadenaRetornoUserTXT += "1,G," + name + "\\n"
+	} else if tipo == 2 {
+		CadenaRetornoUserTXT += "1,U," + name + "," + usr + "," + pwd + "\\n"
+	}
+	fmt.Println(cyan + "Cadena USERS.TXT Nueva: " + reset + CadenaRetornoUserTXT)
+	tamCadena = len(CadenaRetornoUserTXT)
+	//********************************************************
+	//Se reinician los arreglos de apuntadores, los cuales se
+	//encargaran de almacenar los apuntadores que estan en uso
+	//para poder reescribirlos luego
+	//********************************************************
+	ApuntadoresBloqueUsoUSERTXT = nil
+	ApuntadoresInodosUsoUSERTXT = nil
+	ApuntadoresInodosUsoUSERTXT = append(ApuntadoresInodosUsoUSERTXT, 1) //Se agrega el 1 ya que este siempre esta
+	numEstructuraTreeComplete = 0
+	recorrerArbolRecursivoRetornarApuntadoresUSERTXT(file, sb, 3)
+	fmt.Println(tamCadena)
+	fmt.Println(bitmapTablaInodos)
+	fmt.Println(bitmapBloques)
+	//********************************************************
+	//Se calculan cuantos bloques se usaran y se valida si hay
+	//espacio suficiente en el bitmap
+	//********************************************************
+	totalDeBloques := tamCadena / 25.0
+	restoBloques := tamCadena % 25.0
+	if restoBloques != 0 {
+		totalDeBloques++
+	}
+	totalDeBloquesNuevos := totalDeBloques - len(ApuntadoresBloqueUsoUSERTXT)
+	fmt.Println("Bloques nuevos: ", totalDeBloquesNuevos)
+	//var cuantosBloquesLibres int64
+	//var posicionBloquesLibres []int64
+	fmt.Println("Tamano Bitmap Bloques: ", len(bitmapBloques))
+	/*
+		for i := 0; i < len(bitmapBloques); i++ {
+			if bitmapBloques[i] == '0' {
+				cuantosBloquesLibres++
+				posicionBloquesLibres = append(posicionBloquesLibres, int64(i+1))
+			}
+		}
+	*/
+	//fmt.Println("Bloques libres: ", cuantosBloquesLibres)
+	//fmt.Println("Arreglo posiciones libres:", posicionBloquesLibres)
+	fmt.Println("Arreglo posiciones Uso: ", ApuntadoresBloqueUsoUSERTXT)
+	fmt.Println("Apuntadores bloques en uso: ", ApuntadoresBloqueUsoUSERTXT[:])
+	fmt.Println("Apuntadores indodos en uso: ", ApuntadoresInodosUsoUSERTXT[:])
+
+	var todasLasPosicionesAEscribirBloques []int64
+	todasLasPosicionesAEscribirBloques = append(todasLasPosicionesAEscribirBloques[:], ApuntadoresBloqueUsoUSERTXT[:]...)
+	contadorBloquesLibres := totalDeBloquesNuevos
+
+	if len(bitmapBloques) < totalDeBloquesNuevos {
+		fmt.Println(red + "[ERROR]" + reset + "No hay suficientes BLOQUES para insertar el grupo")
+	} else {
+		for i := 0; i < len(bitmapBloques); i++ {
+			if contadorBloquesLibres == 0 {
+				break
+			}
+			if bitmapBloques[i] == '0' {
+				todasLasPosicionesAEscribirBloques = append(todasLasPosicionesAEscribirBloques[:], int64(i+1))
+				contadorBloquesLibres--
+			}
+		}
+		fmt.Println(magenta + "TODAS LAS POSICIONES DE BLOQUES: " + reset)
+		fmt.Println(todasLasPosicionesAEscribirBloques)
+	}
+
+	//********************************************************
+	//Se calculan cuantos inodos se usaran y se valida si hay
+	//espacio suficiente en el bitmap
+	//********************************************************
+
+	totalDeInodos := totalDeBloques / 4
+	restoInodos := totalDeBloques % 4
+	if restoInodos != 0 {
+		totalDeInodos++
+	}
+	totalDeInodosNuevos := totalDeInodos - len(ApuntadoresInodosUsoUSERTXT)
+	fmt.Println("Total de inodos nuevos: ", totalDeInodosNuevos)
+
+	var todasLasPosicionesAEscribirInodos []int64
+	todasLasPosicionesAEscribirInodos = append(todasLasPosicionesAEscribirInodos[:], ApuntadoresInodosUsoUSERTXT[:]...)
+	contadorInodosLibres := totalDeInodosNuevos
+
+	if len(bitmapTablaInodos) < totalDeInodosNuevos {
+		fmt.Println(red + "[ERROR]" + reset + "No hay suficientes INODOS para insertar el grupo")
+	} else {
+		for i := 0; i < len(bitmapTablaInodos); i++ {
+			if contadorInodosLibres == 0 {
+				break
+			}
+			if bitmapTablaInodos[i] == '0' {
+				todasLasPosicionesAEscribirInodos = append(todasLasPosicionesAEscribirInodos[:], int64(i+1))
+				contadorInodosLibres--
+			}
+		}
+		fmt.Println(magenta + "TODAS LAS POSICIONES DE INODOS: " + reset)
+		fmt.Println(todasLasPosicionesAEscribirInodos)
+	}
+
+	//ti := leerTABLAINODO(file, sb.SbApTablaInodo+(sb.SbSizeStructInodo*numEstructuraTreeComplete))
+	//********************************************************
+	//Se escriben las nuevas estructuras
+	//********************************************************
+	fmt.Println("T: ", totalDeBloques)
+	contPosBloque := totalDeBloques
+	numPosBloque := 0
+	for i := 0; i < len(todasLasPosicionesAEscribirInodos); i++ {
+		var nuevoTI TABLAINODO
+		nuevoTI.ICountInodo = todasLasPosicionesAEscribirInodos[i]
+		nuevoTI.ISizeArchivo = int64(totalDeBloques) * sb.SbSizeStructBloque
+		nuevoTI.ICountBloquesAsignados = int64(totalDeBloques)
+		for j := 0; j < 4; j++ {
+			if contPosBloque != 0 {
+				nuevoTI.IArrayBloques[j] = todasLasPosicionesAEscribirBloques[numPosBloque]
+				numPosBloque++
+				contPosBloque--
+			}
+		}
+		if contPosBloque != 0 {
+			nuevoTI.IApIndirecto = todasLasPosicionesAEscribirInodos[i+1]
+		}
+		nuevoTI.IIdProper[0] = '7'
+		nuevoTI.IIdProper[1] = '7'
+		nuevoTI.IIdProper[2] = '7'
+		file.Seek(sb.SbApTablaInodo+(sb.SbSizeStructInodo*(todasLasPosicionesAEscribirInodos[i]-1)), 0)
+		var valorBinarioTablaInodo bytes.Buffer
+		binary.Write(&valorBinarioTablaInodo, binary.BigEndian, &nuevoTI)
+		escribirBytes(file, valorBinarioTablaInodo.Bytes())
+	}
+
+	cadenaUserTxtSeparada := SplitSubN(CadenaRetornoUserTXT, 25)
+	fmt.Println("mamarre VAMOS A BLOQUES")
+	fmt.Println("Longitud: ", len(todasLasPosicionesAEscribirBloques))
+
+	for i := 0; i < len(todasLasPosicionesAEscribirBloques); i++ {
+		var nuevoBD BLOQUEDATOS
+		var contenidoAByte25 [25]byte
+		copy(contenidoAByte25[:], cadenaUserTxtSeparada[i])
+		nuevoBD.DbDato = contenidoAByte25
+		//CadenaRetornoUserTXT
+		fmt.Println(string(contenidoAByte25[:]))
+		fmt.Println(todasLasPosicionesAEscribirBloques[i])
+		file.Seek(sb.SbApBloques+(sb.SbSizeStructBloque*(todasLasPosicionesAEscribirBloques[i]-1)), 0)
+		var valorBinarioBloque bytes.Buffer
+		binary.Write(&valorBinarioBloque, binary.BigEndian, &nuevoBD)
+		escribirBytes(file, valorBinarioBloque.Bytes())
+	}
+
+	//********************************************************
+	//Se escriben las nuevas estructuras
+	//********************************************************
+
+	nuevoBitmapTablaInodos := bitmapTablaInodos
+	for i := 0; i < len(todasLasPosicionesAEscribirInodos); i++ {
+		nuevoBitmapTablaInodos[todasLasPosicionesAEscribirInodos[i]-1] = '1'
+	}
+	fmt.Println(red, nuevoBitmapTablaInodos, reset)
+	reescribirBitmap(file, sb.SbApBitmapTablaInodo, nuevoBitmapTablaInodos)
+	nuevoBitmapBloques := bitmapBloques
+	for i := 0; i < len(todasLasPosicionesAEscribirBloques); i++ {
+		nuevoBitmapBloques[todasLasPosicionesAEscribirBloques[i]-1] = '1'
+	}
+	reescribirBitmap(file, sb.SbApBitmapBloques, nuevoBitmapBloques)
+}
+
+//ApuntadoresBloqueUsoUSERTXT = Arreglo que almacena los apuntadores de tipo bloque que usa el archivo txt
+var ApuntadoresBloqueUsoUSERTXT []int64
+
+//ApuntadoresInodosUsoUSERTXT = Arreglo que almacena los apuntadores de tipo Inodo que usa el archivo txt
+var ApuntadoresInodosUsoUSERTXT []int64
+
+func recorrerArbolRecursivoRetornarApuntadoresUSERTXT(file *os.File, sb SUPERBOOT, tipoArchivo int) {
+	//Se empieza a recorrer desde el inodo del archivo USER.TXT que siempre sera el primer INODO
+	if tipoArchivo == 3 { //CUANDO ES TIPO TABLA INODO
+		ti := leerTABLAINODO(file, sb.SbApTablaInodo+(sb.SbSizeStructInodo*numEstructuraTreeComplete))
+		for i := 0; i < 5; i++ {
+			if i < 4 && ti.IArrayBloques[i] != 0 {
+				//fmt.Println("[TIPO3]pos ", i, ",", numEstructuraTreeComplete, ":", ti.IArrayBloques[i])
+				numEstructuraTreeComplete = ti.IArrayBloques[i]
+				ApuntadoresBloqueUsoUSERTXT = append(ApuntadoresBloqueUsoUSERTXT, ti.IArrayBloques[i])
+				numEstructuraTreeComplete--
+				//recorrerArbolRecursivoRetornarApuntadoresUSERTXT(file, sb, 4)
+			} else if i == 4 && ti.IApIndirecto != 0 {
+				//fmt.Println("[TIPO3]pos ", i, ":", ti.IArrayBloques[i])
+				numEstructuraTreeComplete = ti.IApIndirecto
+				ApuntadoresInodosUsoUSERTXT = append(ApuntadoresInodosUsoUSERTXT, ti.IApIndirecto)
+				numEstructuraTreeComplete--
+				recorrerArbolRecursivoRetornarApuntadoresUSERTXT(file, sb, 3)
+			}
+		}
+	} else if tipoArchivo == 4 { //CUANDO ES TIPO BLOQUE DE DATOS
+		//bd := leerBLOQUEDATOS(file, sb.SbApBloques+(sb.SbSizeStructBloque*numEstructuraTreeComplete))
+		//fmt.Println("[TIPO4]pos: ", string(bd.DbDato[:]))
 	}
 }
