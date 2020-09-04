@@ -224,11 +224,16 @@ func Verificar_Tipo(cadenaOrdenada []string) {
 		} else if strings.ToLower(mamarre) == "logout" {
 			fmt.Println(yellow + "Palabra reservada a ejecutar: " + magenta + "LOGOUT" + reset)
 			metodos.FuncionLOGOUT()
+		} else if strings.ToLower(mamarre) == "mkgrp" {
+			fmt.Println(yellow + "Palabra reservada a ejecutar: " + magenta + "MKGRP" + reset)
+			funciones.FuncionMKGRP(cadenaOrdenada)
 		} else if strings.ToLower(mamarre) == "rep" {
 			fmt.Println(yellow + "Palabra reservada a ejecutar: " + magenta + "REP" + reset)
 			funciones.FuncionREP(cadenaOrdenada)
 		} else if strings.ToLower(mamarre) == "leer" {
 			metodos.ResumenMBR("/home/javier/Imágenes/Disco1.dsk")
+		} else if strings.ToLower(mamarre) == "pruebita" {
+			funciones.FuncionPRUEBITA()
 		} else if mamarre == "" {
 			SaltoLinea()
 			fmt.Println(red + "NO SE INGRESO NINGUN PARAMETRO" + reset)
