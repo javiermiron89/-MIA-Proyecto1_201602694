@@ -227,9 +227,18 @@ func Verificar_Tipo(cadenaOrdenada []string) {
 		} else if strings.ToLower(mamarre) == "mkgrp" {
 			fmt.Println(yellow + "Palabra reservada a ejecutar: " + magenta + "MKGRP" + reset)
 			funciones.FuncionMKGRP(cadenaOrdenada)
+		} else if strings.ToLower(mamarre) == "rmgrp" {
+			fmt.Println(yellow + "Palabra reservada a ejecutar: " + magenta + "RMGRP" + reset)
+			funciones.FuncionRMGRP(cadenaOrdenada)
 		} else if strings.ToLower(mamarre) == "mkusr" {
 			fmt.Println(yellow + "Palabra reservada a ejecutar: " + magenta + "MKUSR" + reset)
 			funciones.FuncionMKUSR(cadenaOrdenada)
+		} else if strings.ToLower(mamarre) == "rmusr" {
+			fmt.Println(yellow + "Palabra reservada a ejecutar: " + magenta + "RMUSR" + reset)
+			funciones.FuncionRMUSR(cadenaOrdenada)
+		} else if strings.ToLower(mamarre) == "mkdir" {
+			fmt.Println(yellow + "Palabra reservada a ejecutar: " + magenta + "MKDIR" + reset)
+			funciones.FuncionMKDIR(cadenaOrdenada)
 		} else if strings.ToLower(mamarre) == "rep" {
 			fmt.Println(yellow + "Palabra reservada a ejecutar: " + magenta + "REP" + reset)
 			funciones.FuncionREP(cadenaOrdenada)

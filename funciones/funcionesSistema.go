@@ -483,6 +483,43 @@ func FuncionMKGRP(vector []string) {
 
 	if idObligatorio == true && nameObligatorio == true {
 		metodos.CrearGrupo(parametros[0], parametros[1])
+	} else {
+		fmt.Println(red + "[ERROR]" + reset + "Los parametros de " + magenta + "MKGRP" + reset + " obligatorios no han sido completamente ingresados")
+	}
+}
+
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//RMGRP-----RMGRP-----FUNCIONES-----FUNCIONES-----RMGRP-----RMGRP-----FUNCIONES-----FUNCIONES-----RMGRP-----RMGRP-----FUNCIONES-----FUNCIONES
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+
+//FuncionRMGRP =
+func FuncionRMGRP(vector []string) {
+	var parametros [2]string //[0]id   [1]name
+	var vecAuxiliar []string = nil
+	idObligatorio := false
+	nameObligatorio := false
+
+	for j := 1; j < len(vector); j++ {
+		vecAuxiliar = strings.SplitN(vector[j], "->", -1)
+		if strings.ToLower(vecAuxiliar[0]) == "-id" {
+			parametros[0] = vecAuxiliar[1]
+			idObligatorio = true
+		} else if strings.ToLower(vecAuxiliar[0]) == "-name" {
+			parametros[1] = vecAuxiliar[1]
+			nameObligatorio = true
+		}
+	}
+
+	if idObligatorio == true && nameObligatorio == true {
+		metodos.RemoverGrupo(parametros[0], parametros[1])
+	} else {
+		fmt.Println(red + "[ERROR]" + reset + "Los parametros de " + magenta + "RMGRP" + reset + " obligatorios no han sido completamente ingresados")
 	}
 }
 
@@ -524,6 +561,84 @@ func FuncionMKUSR(vector []string) {
 
 	if idObligatorio == true && usrObligatorio == true && pwdObligatorio == true && grpObligatorio == true {
 		metodos.CrearUser(parametros[0], parametros[1], parametros[2], parametros[3])
+	}
+}
+
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//RMUSR-----RMUSR-----FUNCIONES-----FUNCIONES-----RMUSR-----RMUSR-----FUNCIONES-----FUNCIONES-----RMUSR-----RMUSR-----FUNCIONES-----FUNCIONES
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+
+//FuncionRMUSR =
+func FuncionRMUSR(vector []string) {
+	var parametros [2]string //[0]id   [1]usr
+	var vecAuxiliar []string = nil
+	idObligatorio := false
+	usrObligatorio := false
+
+	for j := 1; j < len(vector); j++ {
+		vecAuxiliar = strings.SplitN(vector[j], "->", -1)
+		if strings.ToLower(vecAuxiliar[0]) == "-id" {
+			parametros[0] = vecAuxiliar[1]
+			idObligatorio = true
+		} else if strings.ToLower(vecAuxiliar[0]) == "-usr" {
+			parametros[1] = vecAuxiliar[1]
+			usrObligatorio = true
+		}
+	}
+
+	if idObligatorio == true && usrObligatorio == true {
+		metodos.RemoverUser(parametros[0], parametros[1])
+	} else {
+		fmt.Println(red + "[ERROR]" + reset + "Los parametros de " + magenta + "RMUSR" + reset + " obligatorios no han sido completamente ingresados")
+	}
+}
+
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//MKDIR-----MKDIR-----FUNCIONES-----FUNCIONES-----MKDIR-----MKDIR-----FUNCIONES-----FUNCIONES-----MKDIR-----MKDIR-----FUNCIONES-----FUNCIONES
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+
+//FuncionMKDIR =
+func FuncionMKDIR(vector []string) {
+	var parametros [3]string //[0]id   [1]path	[2]-p
+	var vecAuxiliar []string = nil
+	idObligatorio := false
+	pathObligatorio := false
+	pOpcional := false
+
+	for j := 1; j < len(vector); j++ {
+		vecAuxiliar = strings.SplitN(vector[j], "->", -1)
+		fmt.Println(vecAuxiliar)
+		if strings.ToLower(vecAuxiliar[0]) == "-id" {
+			parametros[0] = vecAuxiliar[1]
+			idObligatorio = true
+		} else if strings.ToLower(vecAuxiliar[0]) == "-path" {
+			parametros[1] = vecAuxiliar[1]
+			pathObligatorio = true
+		} else if strings.ToLower(vecAuxiliar[0]) == "-p" {
+			pOpcional = true
+		}
+	}
+
+	if idObligatorio == true && pathObligatorio == true {
+		if pOpcional == true {
+			metodos.CrearDirectorio(parametros[0], parametros[1], true)
+		} else {
+			metodos.CrearDirectorio(parametros[0], parametros[1], false)
+		}
+	} else {
+		fmt.Println(red + "[ERROR]" + reset + "Los parametros de " + magenta + "RMUSR" + reset + " obligatorios no han sido completamente ingresados")
 	}
 }
 
