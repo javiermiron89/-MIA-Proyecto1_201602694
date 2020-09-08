@@ -1661,6 +1661,10 @@ func FormateLWH(id, tipoFormateo string) {
 		dd.DdArrayFiles[0].DdFileApInodo = 1
 		dd.DdArrayFiles[0].DdFileDateCreacion = conversorTiempo
 		dd.DdArrayFiles[0].DdFileDateModificacion = conversorTiempo
+		dd.DdArrayFiles[1].DdFileApInodo = 0
+		dd.DdArrayFiles[2].DdFileApInodo = 0
+		dd.DdArrayFiles[3].DdFileApInodo = 0
+		dd.DdArrayFiles[4].DdFileApInodo = 0
 		dd.DdApDetalleDirectorio = 0
 		//Se posiciona en el inicio del Detalle Directorio, ya que como es el archivo user.txt, va en la primer posicion
 		file.Seek(sb.SbApDetalleDirectorio, 0)
@@ -2106,7 +2110,6 @@ func CrearUser(id, usr, pwd, grp string) {
 				//	PARAMETRO 5 -> tamCadena:	variable int que en princio lleva el len de el arreglo que separa por '\n'
 				//  PARAMETRO 6 -> tipo:		1 indica que es grupo, 2 indica que es usuario, 3 y 4 indican que son remover
 				modificarUSERTXT(file, sb, grp, usr, pwd, tamCadena, 2)
-
 			}
 		}
 	}
@@ -2269,12 +2272,11 @@ func CrearDirectorio(id, path string, pActivo bool) {
 			//********************************************************
 			ApuntadoresArbolVirtualCarpetasUso = nil
 			ApuntadoresDetalleDirectorioCarpetasUso = nil
-			ApuntadoresArbolVirtualCarpetasUso = append(ApuntadoresArbolVirtualCarpetasUso, 1) //Se agrega el 1 ya que este siempre esta
-			//ApuntadoresDetalleDirectorioCarpetasUso = append(ApuntadoresDetalleDirectorioCarpetas, 1) //Se agrega el 1 ya que este siempre esta
+			ApuntadoresArbolVirtualCarpetasUso = append(ApuntadoresArbolVirtualCarpetasUso, 1)           //Se agrega el 1 ya que este siempre esta
+			ApuntadoresDetalleDirectorioCarpetasUso = append(ApuntadoresDetalleDirectorioCarpetasUso, 1) //Se agrega el 1 ya que este siempre esta
 			numEstructuraTreeComplete = 0
 
 			if pActivo == true {
-
 				//********************************************************
 				//Se separa el path para obtener las carpetas
 				//********************************************************
@@ -2286,7 +2288,15 @@ func CrearDirectorio(id, path string, pActivo bool) {
 				}
 
 				RArbol = nil
-				pruebaRecursividad(file, sb, 0, 1)
+				contadorRuta = 0
+
+				var ra RARBOL
+				ra.nivel = 0
+				ra.nombre = "/"
+				ra.puntero = 0
+				RArbol = append(RArbol, ra)
+
+				verificarNivelesRuta(file, sb, cadenaDivididaSlash, false, 0, 1)
 
 				fmt.Println(red + "********************************************" + reset)
 				for i := 0; i < len(RArbol); i++ {
@@ -2296,9 +2306,13 @@ func CrearDirectorio(id, path string, pActivo bool) {
 					fmt.Println(cyan + "----------------" + reset)
 				}
 				fmt.Println(red + "********************************************" + reset)
-
 				cuantoNivelesTieneLaRuta := len(cadenaDivididaSlash)
 				cuantosNivelesCumple := 0
+
+				//********************************************************
+				//Se verifica cuandos padres existen y se valida para
+				//escribir la cantidad necesaria
+				//********************************************************
 				var ArbolDeCumplimientos []RARBOL
 				//fmt.Println(cuantoNivelesTieneLaRuta)
 				for i := 0; i < cuantoNivelesTieneLaRuta; i++ {
@@ -2322,101 +2336,232 @@ func CrearDirectorio(id, path string, pActivo bool) {
 				var cuantosNivelesNuevos int = cuantoNivelesTieneLaRuta - cuantosNivelesCumple
 				fmt.Println("Niveles nuevo a crear: ", cuantosNivelesNuevos)
 				//********************************************************
-				//Se arma para todos el tamaño de la ruta
+				//Se verifica las posiciones disponibles en el bitmap
+				//para la escritura
 				//********************************************************
 				posicionesLibresEnBitmapVirtualDirectorio := 0
+				posicionesLibresEnBitmapDetalleDirectorio := 0
 				for j := 0; j < len(bitmapArbolVirtualDirectorio); j++ {
 					if bitmapArbolVirtualDirectorio[j] == '0' {
 						posicionesLibresEnBitmapVirtualDirectorio++
 					}
 				}
-				posicionesDisponibles := posicionesLibresEnBitmapVirtualDirectorio - cuantosNivelesNuevos
-				posicionAEscribir := cuantosNivelesNuevos
+				for j := 0; j < len(bitmapDetalleDirectorio); j++ {
+					if bitmapDetalleDirectorio[j] == '0' {
+						posicionesLibresEnBitmapDetalleDirectorio++
+					}
+				}
+				posicionesDisponiblesArbol := posicionesLibresEnBitmapVirtualDirectorio - cuantosNivelesNuevos
+				posicionesDisponiblesDetalle := posicionesLibresEnBitmapVirtualDirectorio - cuantosNivelesNuevos
+				posicionAEscribirArbol := cuantosNivelesNuevos
+				posicionAEscribirDirectorio := cuantosNivelesNuevos
 				numeroRepitencias := cuantosNivelesNuevos
-				fmt.Println("Posiciones a escribir: ", posicionAEscribir)
-				if posicionesDisponibles >= 0 {
+				fmt.Println("Posiciones a escribir: ", posicionAEscribirArbol)
+				if posicionesDisponiblesArbol >= 0 && posicionesDisponiblesDetalle >= 0 {
 					var todasLasPosicionesAEscribirArbol []int64
+					var todasLasPosicionesAEscribirDirectorio []int64
 					for i := 0; i < numeroRepitencias; i++ {
+						//********************************************************
+						//Se cargan todas las posiciones a la que se debe escribir
+						//********************************************************
 						for j := 0; j < len(bitmapArbolVirtualDirectorio); j++ {
-							if posicionAEscribir == 0 {
+							if posicionAEscribirArbol == 0 {
 								break
 							}
 							if bitmapArbolVirtualDirectorio[j] == '0' {
 								todasLasPosicionesAEscribirArbol = append(todasLasPosicionesAEscribirArbol[:], int64(j+1))
-								posicionAEscribir--
+								posicionAEscribirArbol--
+							}
+						}
+						for j := 0; j < len(bitmapDetalleDirectorio); j++ {
+							if posicionAEscribirDirectorio == 0 {
+								break
+							}
+							if bitmapDetalleDirectorio[j] == '0' {
+								todasLasPosicionesAEscribirDirectorio = append(todasLasPosicionesAEscribirDirectorio[:], int64(j+1))
+								posicionAEscribirDirectorio--
 							}
 						}
 
 						fmt.Println(todasLasPosicionesAEscribirArbol)
+						fmt.Println(todasLasPosicionesAEscribirDirectorio)
 
-						var avdAnterior ARBOLVIRTUALDIRECTORIO
-						//posicionUltimoDirectorio := sb.SbApArbolDirectorio + (sb.SbSizeStructArbolDirectorio * (ArbolDeCumplimientos[cuantosNivelesCumple-1].puntero))
-						posicionUltimoDirectorio := sb.SbApArbolDirectorio + (sb.SbSizeStructArbolDirectorio * (ArbolDeCumplimientos[len(ArbolDeCumplimientos)-1].puntero))
-						fmt.Println(cyan+"Puntero: ", ArbolDeCumplimientos[len(ArbolDeCumplimientos)-1].puntero, ", ArbolDeCumplimientos", ArbolDeCumplimientos[len(ArbolDeCumplimientos)-1], reset)
-						avdAnterior = leerAVD(file, posicionUltimoDirectorio)
-						for k := 0; k < 6; k++ {
-							if avdAnterior.AvdApArraySubdirectorios[k] == 0 {
-								avdAnterior.AvdApArraySubdirectorios[k] = todasLasPosicionesAEscribirArbol[i]
+						//********************************************************
+						//Se reescribe la informacion del padre, para agregar el
+						//puntero del hijo a la posicion correcta
+						//********************************************************
+						romplerCicloInfinito := false
+						posicionDeCumplimiento := ArbolDeCumplimientos[len(ArbolDeCumplimientos)-1].puntero
+						for {
+							var avdAnterior ARBOLVIRTUALDIRECTORIO
+							//posicionUltimoDirectorio := sb.SbApArbolDirectorio + (sb.SbSizeStructArbolDirectorio * (ArbolDeCumplimientos[cuantosNivelesCumple-1].puntero))
+							fmt.Println(cyan+"Puntero: ", ArbolDeCumplimientos[len(ArbolDeCumplimientos)-1].puntero, ", ArbolDeCumplimientos", ArbolDeCumplimientos[len(ArbolDeCumplimientos)-1], reset)
+							posicionUltimoDirectorio := sb.SbApArbolDirectorio + (sb.SbSizeStructArbolDirectorio * (posicionDeCumplimiento))
+							avdAnterior = leerAVD(file, posicionUltimoDirectorio)
+							hayDisponibilidadDeEspacio := false
+							for k := 0; k < 6; k++ {
+								if avdAnterior.AvdApArraySubdirectorios[k] == 0 {
+									avdAnterior.AvdApArraySubdirectorios[k] = todasLasPosicionesAEscribirArbol[i]
+									hayDisponibilidadDeEspacio = true
+									romplerCicloInfinito = true
+									break
+								}
+							}
+							apuntadorDeRecursividad := avdAnterior.AvdApArbolVirtualDirectorio
+							if hayDisponibilidadDeEspacio == false {
+								if apuntadorDeRecursividad == 0 {
+									fmt.Println("Voy ENTRANDOOOOOOOOOOOOOOO")
+									//********************************************************
+									//Se buscan nuevas posiciones en el bitmap para escribir
+									//sin interferir con las posiciones que ya estan
+									//reservadas para escribir las carpetas
+									//********************************************************
+									var posicionesAEscribirArbolTemporal []int64
+									//var posicionesBloqueadas []int64
+									yaEncontreEspacio := false
+									bitmapArbolTemporal := bitmapArbolVirtualDirectorio
+									fmt.Println("BITMAP TEMPORAL INICIAL: ", bitmapArbolTemporal)
+									for j := 0; j < len(bitmapArbolTemporal); j++ {
+										if yaEncontreEspacio == true {
+											break
+										}
+										if bitmapArbolTemporal[j] == '0' {
+											for k := range todasLasPosicionesAEscribirArbol {
+												if todasLasPosicionesAEscribirArbol[k] == int64(j+1) {
+													fmt.Println("---------")
+													fmt.Println("ESTA POSICION YA ESTA OCUPADA")
+													fmt.Println("todasLasPosicionesAEscribirArbol[k]: ", todasLasPosicionesAEscribirArbol[k])
+													fmt.Println("int64(j+1): ", int64(j+1))
+													fmt.Println("---------")
+													bitmapArbolTemporal[j] = '1'
+													break
+												}
+											}
+										}
+									}
+									for j := 0; j < len(bitmapArbolTemporal); j++ {
+										if bitmapArbolTemporal[j] == '0' {
+											posicionesAEscribirArbolTemporal = append(posicionesAEscribirArbolTemporal[:], int64(j+1))
+											break
+										}
+									}
+									fmt.Println("BITMAP TEMPORAL FINAL: ", bitmapArbolTemporal)
+									fmt.Println("ARBOL TEMPORAL: ", posicionesAEscribirArbolTemporal)
+									avdAnterior.AvdApArbolVirtualDirectorio = posicionesAEscribirArbolTemporal[0]
+									file.Seek(posicionUltimoDirectorio, 0)
+									var valorBinarioArbolVirtual bytes.Buffer
+									binary.Write(&valorBinarioArbolVirtual, binary.BigEndian, &avdAnterior)
+									escribirBytes(file, valorBinarioArbolVirtual.Bytes())
+
+									var avdTemporal ARBOLVIRTUALDIRECTORIO
+									posicionUltimoDirectorioTemporal := sb.SbApArbolDirectorio + (sb.SbSizeStructArbolDirectorio * (posicionesAEscribirArbolTemporal[i] - 1))
+									avdTemporal = leerAVD(file, posicionUltimoDirectorioTemporal)
+									avdTemporal.AvdFechaCreacion = avdAnterior.AvdFechaCreacion
+									avdTemporal.AvdNombreDirectorio = avdAnterior.AvdNombreDirectorio
+									for k := 0; k < 6; k++ {
+										if avdTemporal.AvdApArraySubdirectorios[k] == 0 {
+											avdTemporal.AvdApArraySubdirectorios[k] = 0
+										}
+									}
+									avdTemporal.AvdApDetalleDirectorio = 0
+									avdTemporal.AvdApArbolVirtualDirectorio = 0
+									avdTemporal.AvdProper = avdAnterior.AvdProper
+
+									file.Seek(posicionUltimoDirectorioTemporal, 0)
+									var valorBinarioArbolVirtualTemporal bytes.Buffer
+									binary.Write(&valorBinarioArbolVirtualTemporal, binary.BigEndian, &avdTemporal)
+									escribirBytes(file, valorBinarioArbolVirtualTemporal.Bytes())
+
+									bitmapArbolVirtualDirectorio[posicionesAEscribirArbolTemporal[i]-1] = '1'
+									file.Seek(sb.SbApBitmapArbolDirectorio, 0)
+									var valorBitmapVirtual bytes.Buffer
+									binary.Write(&valorBitmapVirtual, binary.BigEndian, &bitmapArbolVirtualDirectorio)
+									escribirBytes(file, valorBitmapVirtual.Bytes())
+								} else {
+									posicionDeCumplimiento = avdAnterior.AvdApArbolVirtualDirectorio - 1
+								}
+							} else {
+								file.Seek(posicionUltimoDirectorio, 0)
+								var valorBinarioArbolVirtual bytes.Buffer
+								binary.Write(&valorBinarioArbolVirtual, binary.BigEndian, &avdAnterior)
+								escribirBytes(file, valorBinarioArbolVirtual.Bytes())
+
+								//********************************************************
+								//Se escribe el nuevo AVD
+								//********************************************************
+								var avdNuevo ARBOLVIRTUALDIRECTORIO
+								var nombreAByte16 [16]byte
+								copy(nombreAByte16[:], cadenaDivididaSlash[len(cadenaDivididaSlash)-cuantosNivelesNuevos])
+								fmt.Println("NOMBRE A ESCRIBIR: ", cadenaDivididaSlash[len(cadenaDivididaSlash)-cuantosNivelesNuevos])
+
+								avdNuevo.AvdNombreDirectorio = nombreAByte16
+
+								fmt.Println(red + "MAMARRE" + reset)
+
+								tiempo := time.Now()
+								formatoTiempo := tiempo.Format("01-02-2006 15:04:05")
+								var conversorTiempo [19]byte
+								copy(conversorTiempo[:], formatoTiempo)
+
+								avdNuevo.AvdFechaCreacion = conversorTiempo
+								for k := 0; k < 6; k++ {
+									avdNuevo.AvdApArraySubdirectorios[k] = 0
+								}
+								avdNuevo.AvdApDetalleDirectorio = todasLasPosicionesAEscribirDirectorio[i]
+								avdNuevo.AvdApArbolVirtualDirectorio = 0
+								copy(avdNuevo.AvdProper[:], SesionActiva.usuario)
+
+								fmt.Println(red, todasLasPosicionesAEscribirArbol[i]-1, reset)
+								file.Seek(sb.SbApArbolDirectorio+(sb.SbSizeStructArbolDirectorio*(todasLasPosicionesAEscribirArbol[i]-1)), 0)
+								var valorBinarioArbolVirtualNuevo bytes.Buffer
+								binary.Write(&valorBinarioArbolVirtualNuevo, binary.BigEndian, &avdNuevo)
+								escribirBytes(file, valorBinarioArbolVirtualNuevo.Bytes())
+
+								//********************************************************
+								//Se escribe el nuevo DD
+								//********************************************************
+								var ddNuevo DETALLEDIRECTORIO
+								ddNuevo.DdArrayFiles[0].DdFileApInodo = 0
+								ddNuevo.DdArrayFiles[1].DdFileApInodo = 0
+								ddNuevo.DdArrayFiles[2].DdFileApInodo = 0
+								ddNuevo.DdArrayFiles[3].DdFileApInodo = 0
+								ddNuevo.DdArrayFiles[4].DdFileApInodo = 0
+								ddNuevo.DdApDetalleDirectorio = 0
+
+								file.Seek(sb.SbApDetalleDirectorio+(sb.SbSizeStructDetalleDirectorio*(todasLasPosicionesAEscribirDirectorio[i]-1)), 0)
+								var valorBinarioDetalleDirectorio bytes.Buffer
+								binary.Write(&valorBinarioDetalleDirectorio, binary.BigEndian, &ddNuevo)
+								escribirBytes(file, valorBinarioDetalleDirectorio.Bytes())
+
+								//********************************************************
+								//Se reescriben los bitmaps
+								//********************************************************
+								bitmapArbolVirtualDirectorio[todasLasPosicionesAEscribirArbol[i]-1] = '1'
+								bitmapDetalleDirectorio[todasLasPosicionesAEscribirDirectorio[i]-1] = '1'
+
+								file.Seek(sb.SbApBitmapArbolDirectorio, 0)
+								var valorBitmapArbol bytes.Buffer
+								binary.Write(&valorBitmapArbol, binary.BigEndian, &bitmapArbolVirtualDirectorio)
+								escribirBytes(file, valorBitmapArbol.Bytes())
+
+								file.Seek(sb.SbApBitmapDetalleDirectorio, 0)
+								var valorBitmapDirectorio bytes.Buffer
+								binary.Write(&valorBitmapDirectorio, binary.BigEndian, &bitmapDetalleDirectorio)
+								escribirBytes(file, valorBitmapDirectorio.Bytes())
+
+								var rarbol2 RARBOL
+								rarbol2.nivel = 50
+								rarbol2.nombre = cadenaDivididaSlash[len(cadenaDivididaSlash)-cuantosNivelesNuevos]
+								rarbol2.puntero = todasLasPosicionesAEscribirArbol[i] - 1
+								ArbolDeCumplimientos = append(ArbolDeCumplimientos, rarbol2)
+
+								cuantosNivelesNuevos--
+							}
+
+							if romplerCicloInfinito == true {
 								break
 							}
 						}
-						file.Seek(posicionUltimoDirectorio, 0)
-						var valorBinarioArbolVirtual bytes.Buffer
-						binary.Write(&valorBinarioArbolVirtual, binary.BigEndian, &avdAnterior)
-						escribirBytes(file, valorBinarioArbolVirtual.Bytes())
-
-						//SE ESCRIBE EL NUEVO DIRECTORIO
-						var avdNuevo ARBOLVIRTUALDIRECTORIO
-						var nombreAByte16 [16]byte
-						copy(nombreAByte16[:], cadenaDivididaSlash[len(cadenaDivididaSlash)-cuantosNivelesNuevos])
-						fmt.Println("NOMBRE A ESCRIBIR: ", cadenaDivididaSlash[len(cadenaDivididaSlash)-cuantosNivelesNuevos])
-
-						avdNuevo.AvdNombreDirectorio = nombreAByte16
-
-						fmt.Println(red + "MAMARRE" + reset)
-
-						tiempo := time.Now()
-						formatoTiempo := tiempo.Format("01-02-2006 15:04:05")
-						var conversorTiempo [19]byte
-						copy(conversorTiempo[:], formatoTiempo)
-
-						avdNuevo.AvdFechaCreacion = conversorTiempo
-						for k := 0; k < 6; k++ {
-							avdNuevo.AvdApArraySubdirectorios[k] = 0
-						}
-						avdNuevo.AvdApDetalleDirectorio = 0
-						avdNuevo.AvdProper[0] = 'r'
-						avdNuevo.AvdProper[1] = 'o'
-						avdNuevo.AvdProper[2] = 'o'
-						avdNuevo.AvdProper[3] = 't'
-
-						fmt.Println(red, todasLasPosicionesAEscribirArbol[i]-1, reset)
-						file.Seek(sb.SbApArbolDirectorio+(sb.SbSizeStructArbolDirectorio*(todasLasPosicionesAEscribirArbol[i]-1)), 0)
-						var valorBinarioArbolVirtualNuevo bytes.Buffer
-						binary.Write(&valorBinarioArbolVirtualNuevo, binary.BigEndian, &avdNuevo)
-						escribirBytes(file, valorBinarioArbolVirtualNuevo.Bytes())
-
-						bitmapArbolVirtualDirectorio[todasLasPosicionesAEscribirArbol[i]-1] = '1'
-
-						file.Seek(sb.SbApBitmapArbolDirectorio, 0)
-						var valorBitmap bytes.Buffer
-						binary.Write(&valorBitmap, binary.BigEndian, &bitmapArbolVirtualDirectorio)
-						escribirBytes(file, valorBitmap.Bytes())
-
-						var rarbol2 RARBOL
-						rarbol2.nivel = 5
-						rarbol2.nombre = cadenaDivididaSlash[len(cadenaDivididaSlash)-cuantosNivelesNuevos]
-						rarbol2.puntero = todasLasPosicionesAEscribirArbol[i] - 1
-						ArbolDeCumplimientos = append(ArbolDeCumplimientos, rarbol2)
-
-						cuantosNivelesNuevos--
-
-						/*
-							file.Seek(sb.SbApArbolDirectorio+(sb.SbSizeStructArbolDirectorio*(todasLasPosicionesAEscribirArbol[i])), 0)
-							var valorBinarioArbolVirtual bytes.Buffer
-							binary.Write(&valorBinarioArbolVirtual, binary.BigEndian, &avdNuevo)
-							escribirBytes(file, valorBinarioArbolVirtual.Bytes())
-						*/
 					}
 				}
 			} else {
@@ -2427,8 +2572,8 @@ func CrearDirectorio(id, path string, pActivo bool) {
 				//********************************************************
 				ApuntadoresArbolVirtualCarpetasUso = nil
 				ApuntadoresDetalleDirectorioCarpetasUso = nil
-				ApuntadoresArbolVirtualCarpetasUso = append(ApuntadoresArbolVirtualCarpetasUso, 1) //Se agrega el 1 ya que este siempre esta
-				//ApuntadoresDetalleDirectorioCarpetasUso = append(ApuntadoresDetalleDirectorioCarpetas, 1) //Se agrega el 1 ya que este siempre esta
+				ApuntadoresArbolVirtualCarpetasUso = append(ApuntadoresArbolVirtualCarpetasUso, 1)           //Se agrega el 1 ya que este siempre esta
+				ApuntadoresDetalleDirectorioCarpetasUso = append(ApuntadoresDetalleDirectorioCarpetasUso, 1) //Se agrega el 1 ya que este siempre esta
 				numEstructuraTreeComplete = 0
 
 				//********************************************************
@@ -2443,7 +2588,14 @@ func CrearDirectorio(id, path string, pActivo bool) {
 
 				RArbol = nil
 				contadorRuta = 0
-				verificarNivelesRuta(file, sb, cadenaDivididaSlash, 0, 1)
+
+				var ra RARBOL
+				ra.nivel = 0
+				ra.nombre = "/"
+				ra.puntero = 0
+				RArbol = append(RArbol, ra)
+
+				verificarNivelesRuta(file, sb, cadenaDivididaSlash, false, 0, 1)
 
 				fmt.Println(red + "********************************************" + reset)
 				for i := 0; i < len(RArbol); i++ {
@@ -2455,6 +2607,11 @@ func CrearDirectorio(id, path string, pActivo bool) {
 				fmt.Println(red + "********************************************" + reset)
 				cuantoNivelesTieneLaRuta := len(cadenaDivididaSlash)
 				cuantosNivelesCumple := 0
+
+				//********************************************************
+				//Se verifica cuandos padres existen y se valida para
+				//escribir la cantidad necesaria
+				//********************************************************
 				var ArbolDeCumplimientos []RARBOL
 				//fmt.Println(cuantoNivelesTieneLaRuta)
 				for i := 0; i < cuantoNivelesTieneLaRuta; i++ {
@@ -2485,7 +2642,194 @@ func CrearDirectorio(id, path string, pActivo bool) {
 					existeElPadre = true
 				}
 				if existeElPadre == true {
+					//********************************************************
+					//Se verifica las posiciones disponibles en el bitmap
+					//para la escritura
+					//********************************************************
+					posicionesLibresEnBitmapVirtualDirectorio := 0
+					posicionesLibresEnBitmapDetalleDirectorio := 0
+					for j := 0; j < len(bitmapArbolVirtualDirectorio); j++ {
+						if bitmapArbolVirtualDirectorio[j] == '0' {
+							posicionesLibresEnBitmapVirtualDirectorio++
+						}
+					}
+					for j := 0; j < len(bitmapDetalleDirectorio); j++ {
+						if bitmapDetalleDirectorio[j] == '0' {
+							posicionesLibresEnBitmapDetalleDirectorio++
+						}
+					}
 
+					posicionesDisponiblesArbol := posicionesLibresEnBitmapVirtualDirectorio - cuantosNivelesNuevos
+					posicionesDisponiblesDetalle := posicionesLibresEnBitmapDetalleDirectorio - cuantosNivelesNuevos
+					if posicionesDisponiblesArbol >= 0 && posicionesDisponiblesDetalle >= 0 {
+						var todasLasPosicionesAEscribirArbol []int64
+						var todasLasPosicionesAEscribirDirectorio []int64
+						//********************************************************
+						//Se cargan todas las posiciones a la que se debe escribir
+						//********************************************************
+						for j := 0; j < len(bitmapArbolVirtualDirectorio); j++ {
+							if bitmapArbolVirtualDirectorio[j] == '0' {
+								todasLasPosicionesAEscribirArbol = append(todasLasPosicionesAEscribirArbol[:], int64(j+1))
+								break
+							}
+						}
+						for j := 0; j < len(bitmapDetalleDirectorio); j++ {
+							if bitmapDetalleDirectorio[j] == '0' {
+								todasLasPosicionesAEscribirDirectorio = append(todasLasPosicionesAEscribirDirectorio[:], int64(j+1))
+								break
+							}
+						}
+
+						fmt.Println(todasLasPosicionesAEscribirArbol)
+						fmt.Println(todasLasPosicionesAEscribirDirectorio)
+
+						//********************************************************
+						//Se reescribe la informacion del padre, para agregar el
+						//puntero del hijo a la posicion correcta
+						//********************************************************
+						romplerCicloInfinito := false
+						posicionDeCumplimiento := ArbolDeCumplimientos[len(ArbolDeCumplimientos)-1].puntero
+						for {
+							var avdAnterior ARBOLVIRTUALDIRECTORIO
+							//posicionUltimoDirectorio := sb.SbApArbolDirectorio + (sb.SbSizeStructArbolDirectorio * (ArbolDeCumplimientos[cuantosNivelesCumple-1].puntero))
+							posicionUltimoDirectorio := sb.SbApArbolDirectorio + (sb.SbSizeStructArbolDirectorio * (posicionDeCumplimiento))
+							fmt.Println(cyan+"Puntero: ", ArbolDeCumplimientos[len(ArbolDeCumplimientos)-1].puntero, ", ArbolDeCumplimientos", ArbolDeCumplimientos[len(ArbolDeCumplimientos)-1], reset)
+							avdAnterior = leerAVD(file, posicionUltimoDirectorio)
+							hayDisponibilidadDeEspacio := false
+							for k := 0; k < 6; k++ {
+								if avdAnterior.AvdApArraySubdirectorios[k] == 0 {
+									avdAnterior.AvdApArraySubdirectorios[k] = todasLasPosicionesAEscribirArbol[0]
+									hayDisponibilidadDeEspacio = true
+									romplerCicloInfinito = true
+									break
+								}
+							}
+							apuntadorDeRecursividad := avdAnterior.AvdApArbolVirtualDirectorio
+							if hayDisponibilidadDeEspacio == false {
+								if apuntadorDeRecursividad == 0 {
+									//********************************************************
+									//Se buscan nuevas posiciones en el bitmap para escribir
+									//sin interferir con las posiciones que ya estan
+									//reservadas para escribir las carpetas
+									//********************************************************
+									var posicionesAEscribirArbolTemporal []int64
+									yaEncontreEspacio := false
+									bitmapArbolTemporal := bitmapArbolVirtualDirectorio
+									for j := 0; j < len(bitmapArbolTemporal); j++ {
+										if yaEncontreEspacio == true {
+											break
+										}
+										if bitmapArbolTemporal[j] == '0' {
+											for k := range todasLasPosicionesAEscribirArbol {
+												if todasLasPosicionesAEscribirArbol[k] == int64(j+1) {
+													fmt.Println("ESTA POSICION YA ESTA OCUPADA")
+												} else {
+													posicionesAEscribirArbolTemporal = append(posicionesAEscribirArbolTemporal[:], int64(j+1))
+													yaEncontreEspacio = true
+													break
+												}
+											}
+										}
+									}
+									avdAnterior.AvdApArbolVirtualDirectorio = posicionesAEscribirArbolTemporal[0]
+									file.Seek(posicionUltimoDirectorio, 0)
+									var valorBinarioArbolVirtual bytes.Buffer
+									binary.Write(&valorBinarioArbolVirtual, binary.BigEndian, &avdAnterior)
+									escribirBytes(file, valorBinarioArbolVirtual.Bytes())
+
+									var avdTemporal ARBOLVIRTUALDIRECTORIO
+									posicionUltimoDirectorioTemporal := sb.SbApArbolDirectorio + (sb.SbSizeStructArbolDirectorio * (posicionesAEscribirArbolTemporal[0] - 1))
+									avdTemporal = leerAVD(file, posicionUltimoDirectorioTemporal)
+									avdTemporal.AvdFechaCreacion = avdAnterior.AvdFechaCreacion
+									avdTemporal.AvdNombreDirectorio = avdAnterior.AvdNombreDirectorio
+									for k := 0; k < 6; k++ {
+										if avdTemporal.AvdApArraySubdirectorios[k] == 0 {
+											avdTemporal.AvdApArraySubdirectorios[k] = 0
+										}
+									}
+									avdTemporal.AvdApDetalleDirectorio = 0
+									avdTemporal.AvdApArbolVirtualDirectorio = 0
+									avdTemporal.AvdProper = avdAnterior.AvdProper
+
+									file.Seek(posicionUltimoDirectorioTemporal, 0)
+									var valorBinarioArbolVirtualTemporal bytes.Buffer
+									binary.Write(&valorBinarioArbolVirtualTemporal, binary.BigEndian, &avdTemporal)
+									escribirBytes(file, valorBinarioArbolVirtualTemporal.Bytes())
+
+									bitmapArbolVirtualDirectorio[posicionesAEscribirArbolTemporal[0]-1] = '1'
+									file.Seek(sb.SbApBitmapArbolDirectorio, 0)
+									var valorBitmapVirtual bytes.Buffer
+									binary.Write(&valorBitmapVirtual, binary.BigEndian, &bitmapArbolVirtualDirectorio)
+									escribirBytes(file, valorBitmapVirtual.Bytes())
+									//fmt.Println(magenta, posicionesAEscribirArbolTemporal, reset)
+								} else {
+									posicionDeCumplimiento = avdAnterior.AvdApArbolVirtualDirectorio - 1
+								}
+							} else {
+								file.Seek(posicionUltimoDirectorio, 0)
+								var valorBinarioArbolVirtual bytes.Buffer
+								binary.Write(&valorBinarioArbolVirtual, binary.BigEndian, &avdAnterior)
+								escribirBytes(file, valorBinarioArbolVirtual.Bytes())
+
+								//********************************************************
+								//Se escribe el nuevo AVD
+								//********************************************************
+								var avdNuevo ARBOLVIRTUALDIRECTORIO
+								var nombreAByte16 [16]byte
+								copy(nombreAByte16[:], cadenaDivididaSlash[len(cadenaDivididaSlash)-cuantosNivelesNuevos])
+								fmt.Println("NOMBRE A ESCRIBIR: ", cadenaDivididaSlash[len(cadenaDivididaSlash)-cuantosNivelesNuevos])
+
+								avdNuevo.AvdNombreDirectorio = nombreAByte16
+
+								tiempo := time.Now()
+								formatoTiempo := tiempo.Format("01-02-2006 15:04:05")
+								var conversorTiempo [19]byte
+								copy(conversorTiempo[:], formatoTiempo)
+
+								avdNuevo.AvdFechaCreacion = conversorTiempo
+								for k := 0; k < 6; k++ {
+									avdNuevo.AvdApArraySubdirectorios[k] = 0
+								}
+								avdNuevo.AvdApDetalleDirectorio = todasLasPosicionesAEscribirDirectorio[0]
+								avdNuevo.AvdApArbolVirtualDirectorio = 0
+								copy(avdNuevo.AvdProper[:], SesionActiva.usuario)
+
+								fmt.Println(red, todasLasPosicionesAEscribirArbol[0]-1, reset)
+								file.Seek(sb.SbApArbolDirectorio+(sb.SbSizeStructArbolDirectorio*(todasLasPosicionesAEscribirArbol[0]-1)), 0)
+								var valorBinarioArbolVirtualNuevo bytes.Buffer
+								binary.Write(&valorBinarioArbolVirtualNuevo, binary.BigEndian, &avdNuevo)
+								escribirBytes(file, valorBinarioArbolVirtualNuevo.Bytes())
+
+								//********************************************************
+								//Se reescriben los bitmaps
+								//********************************************************
+								bitmapArbolVirtualDirectorio[todasLasPosicionesAEscribirArbol[0]-1] = '1'
+								bitmapDetalleDirectorio[todasLasPosicionesAEscribirDirectorio[0]-1] = '1'
+
+								file.Seek(sb.SbApBitmapArbolDirectorio, 0)
+								var valorBitmapVirtual bytes.Buffer
+								binary.Write(&valorBitmapVirtual, binary.BigEndian, &bitmapArbolVirtualDirectorio)
+								escribirBytes(file, valorBitmapVirtual.Bytes())
+
+								file.Seek(sb.SbApBitmapDetalleDirectorio, 0)
+								var valorBitmapDirectorio bytes.Buffer
+								binary.Write(&valorBitmapDirectorio, binary.BigEndian, &bitmapDetalleDirectorio)
+								escribirBytes(file, valorBitmapDirectorio.Bytes())
+
+								var rarbol2 RARBOL
+								rarbol2.nivel = 5
+								rarbol2.nombre = cadenaDivididaSlash[len(cadenaDivididaSlash)-cuantosNivelesNuevos]
+								rarbol2.puntero = todasLasPosicionesAEscribirArbol[0] - 1
+								ArbolDeCumplimientos = append(ArbolDeCumplimientos, rarbol2)
+							}
+							if romplerCicloInfinito == true {
+								break
+							}
+						}
+						/*
+
+						 */
+					}
 				}
 			}
 
@@ -2710,29 +3054,33 @@ func pruebaRecursividad(file *os.File, sb SUPERBOOT, posicion int64, tipoArchivo
 
 var contadorRuta int64
 
-func verificarNivelesRuta(file *os.File, sb SUPERBOOT, arregloRutas []string, posicion int64, tipoArchivo int) {
+func verificarNivelesRuta(file *os.File, sb SUPERBOOT, arregloRutas []string, soyYoMismo bool, posicion int64, tipoArchivo int) {
 	if tipoArchivo == 1 { //SE UTILIZA PARA RECORRER AL PADRE
 		var avd ARBOLVIRTUALDIRECTORIO
 		avd = leerAVD(file, sb.SbApArbolDirectorio+(sb.SbSizeStructArbolDirectorio*posicion))
 		if contadorRuta == 0 {
-			var ra RARBOL
-			ra.nivel = 0
-			var nombreP1 string
-			for i1, valor1 := range avd.AvdNombreDirectorio {
-				if avd.AvdNombreDirectorio[i1] != 0 {
-					nombreP1 += string(valor1)
+			/*
+				var ra RARBOL
+				ra.nivel = 0
+				var nombreP1 string
+				for i1, valor1 := range avd.AvdNombreDirectorio {
+					if avd.AvdNombreDirectorio[i1] != 0 {
+						nombreP1 += string(valor1)
+					}
 				}
-			}
-			ra.nombre = nombreP1
-			ra.puntero = posicion
-			RArbol = append(RArbol, ra)
+				ra.nombre = nombreP1
+				ra.puntero = posicion
+				RArbol = append(RArbol, ra)
+			*/
 		}
 		var cont int = 0
 		var posicionXD int64
 		posicionXD = posicion
 		fmt.Println("Contador ruta: ", contadorRuta)
 		fmt.Println("Nombre en contador:", arregloRutas[contadorRuta])
-		contadorRuta++
+		if soyYoMismo == false {
+			contadorRuta++
+		}
 		for i := 0; i < 8; i++ {
 			if i < 6 && avd.AvdApArraySubdirectorios[i] != 0 {
 				var apuntador int64
@@ -2745,46 +3093,35 @@ func verificarNivelesRuta(file *os.File, sb SUPERBOOT, arregloRutas []string, po
 					}
 				}
 				if contadorRuta < int64(len(arregloRutas)) {
+					fmt.Println(green + arregloRutas[contadorRuta] + reset)
+					fmt.Println(yellow + nombreDirectorio + reset)
 					if arregloRutas[contadorRuta] == nombreDirectorio {
 						fmt.Println("[TIPO1]pos ", i, ", grado: ", posicionXD, " {"+string(avd.AvdNombreDirectorio[:])+"} -> ", avd.AvdApArraySubdirectorios[i])
-						fmt.Println("SOY IGUAL")
 						var ra RARBOL
 						ra.nivel = contadorRuta
 						ra.nombre = nombreDirectorio
 						ra.puntero = apuntador
 						RArbol = append(RArbol, ra)
-						verificarNivelesRuta(file, sb, arregloRutas, apuntador, 1)
+						for j := range RArbol {
+							if RArbol[j].nivel == ra.nivel && RArbol[j].nombre == ra.nombre {
+								fmt.Println("SOYYYYY COOOOOPIIIIIIAAAA")
+							} else {
+
+							}
+						}
+						//RArbol = append(RArbol, ra)
+						verificarNivelesRuta(file, sb, arregloRutas, false, apuntador, 1)
 					}
 				}
 				cont++
-				/*
-					var ra RARBOL
-					ra.nivel = posicion
-					var nombreP1 string
-					for i1, valor1 := range avd.AvdNombreDirectorio {
-						if avd.AvdNombreDirectorio[i1] != 0 {
-							nombreP1 += string(valor1)
-						}
-					}
-					ra.nombre = nombreP1
-					ra.puntero = posicion
-					yaExiste := false
-					for j := 0; j < len(RArbol); j++ {
-						if RArbol[j].nombre == ra.nombre {
-							yaExiste = true
-						}
-					}
-					if yaExiste == false {
-						RArbol = append(RArbol, ra)
-					}
-					posicionNueva := avd.AvdApArraySubdirectorios[i]
-					pruebaRecursividad(file, sb, posicionNueva-1, 1)
-					cont++
-				*/
-
+			} else if i == 7 && avd.AvdApArbolVirtualDirectorio != 0 && cont == 0 {
+				fmt.Println("[TIPO1]pos ind", i, ", grado: ", posicionXD, " {"+string(avd.AvdNombreDirectorio[:])+"} -> ", avd.AvdApArbolVirtualDirectorio)
+				var apuntador int64
+				apuntador = avd.AvdApArbolVirtualDirectorio
+				verificarNivelesRuta(file, sb, arregloRutas, true, apuntador-1, 1)
 			}
 		}
-		if cont == 0 {
+		if cont == 0 && soyYoMismo == false {
 			fmt.Println("[TIPO1]pos  X , grado: ", posicion, " {"+string(avd.AvdNombreDirectorio[:])+"} -> NADA")
 			var ra RARBOL
 			ra.nivel = contadorRuta
@@ -2794,34 +3131,20 @@ func verificarNivelesRuta(file *os.File, sb SUPERBOOT, arregloRutas []string, po
 					nombreDirectorio += string(valor1)
 				}
 			}
+			fmt.Println(nombreDirectorio)
 			ra.nombre = nombreDirectorio
 			ra.puntero = posicion
-			RArbol = append(RArbol, ra)
-		}
-		/*
-			if cont == 0 {
-				fmt.Println("[TIPO1]pos  X , grado: ", posicion, " {"+string(avd.AvdNombreDirectorio[:])+"} -> NADA")
-				var ra RARBOL
-				ra.nivel = posicion
-				var nombreP1 string
-				for i1, valor1 := range avd.AvdNombreDirectorio {
-					if avd.AvdNombreDirectorio[i1] != 0 {
-						nombreP1 += string(valor1)
-					}
-				}
-				ra.nombre = nombreP1
-				ra.puntero = posicion
-				yaExiste := false
-				for j := 0; j < len(RArbol); j++ {
-					if RArbol[j].nombre == ra.nombre {
-						yaExiste = true
-					}
-				}
-				if yaExiste == false {
-					RArbol = append(RArbol, ra)
+			verificarCopia := false
+			for i := range RArbol {
+				if RArbol[i].nivel == ra.nivel && RArbol[i].nombre == ra.nombre {
+					fmt.Println("SOYYYYY COOOOOPIIIIIIAAAA")
+					verificarCopia = true
 				}
 			}
-		*/
+			if verificarCopia == false {
+				RArbol = append(RArbol, ra)
+			}
+		}
 	}
 }
 
@@ -4336,7 +4659,7 @@ func recorrerArbolRecursivoReportePorBitmap(file *os.File, sb SUPERBOOT, posicio
 				numEstructuraTreeComplete = avd.AvdApDetalleDirectorio
 			} else if i == 7 && avd.AvdApArbolVirtualDirectorio != 0 {
 				fmt.Println("[TIPO1]pos ind", i, ":", avd.AvdApArbolVirtualDirectorio)
-				subCadenaReporteTreeComplete += "AVD" + strconv.FormatInt(numEstructuraTreeComplete+1, 10) + ":" + strconv.Itoa(i+1) + " -> "
+				subCadenaReporteTreeComplete += "AVD" + strconv.FormatInt(posicion+1, 10) + ":" + strconv.Itoa(i+1) + " -> "
 				numEstructuraTreeComplete = avd.AvdApArbolVirtualDirectorio
 				subCadenaReporteTreeComplete += "AVD" + strconv.FormatInt(avd.AvdApArbolVirtualDirectorio, 10) + "\n"
 			}
@@ -4357,7 +4680,7 @@ func recorrerArbolRecursivoReportePorBitmap(file *os.File, sb SUPERBOOT, posicio
 				}
 				subCadenaReporteTreeComplete += "<TR>\n<TD BGCOLOR='#a3d977'>" + nombreDirectorio + "</TD><TD port='1'>" + strconv.FormatInt(dd.DdArrayFiles[i].DdFileApInodo, 10) + "</TD>\n</TR>\n"
 			} else {
-				subCadenaReporteTreeComplete += "<TR>\n<TD BGCOLOR='#a3d977'>APD" + strconv.Itoa(i+1) + "</TD><TD port='" + strconv.Itoa(i+1) + "'>-1</TD>\n</TR>\n"
+				subCadenaReporteTreeComplete += "<TR>\n<TD BGCOLOR='#a3d977'>APD" + strconv.Itoa(i+1) + "</TD><TD port='" + strconv.Itoa(i+1) + "'>0</TD>\n</TR>\n"
 			}
 		}
 		subCadenaReporteTreeComplete += "<TR>\n<TD BGCOLOR='#a3d977'>API1</TD><TD port='6'>" + strconv.FormatInt(dd.DdApDetalleDirectorio, 10) + "</TD>\n</TR>\n"
@@ -4403,7 +4726,7 @@ func recorrerArbolRecursivoReportePorBitmap(file *os.File, sb SUPERBOOT, posicio
 	} else if tipoArchivo == 4 {
 		bd := leerBLOQUEDATOS(file, sb.SbApBloques+(sb.SbSizeStructBloque*posicion))
 		subCadenaReporteTreeComplete += "\nB" + strconv.FormatInt(posicion+1, 10) + "[label=<\n\n<TABLE BORDER='0' CELLBORDER='1' CELLSPACING='0'>\n"
-		subCadenaReporteTreeComplete += "<TR>\n<TD BGCOLOR='#ff8f80'>BLOQUE</TD><TD BGCOLOR='#ff8f80'>" + strconv.FormatInt(numEstructuraTreeComplete+1, 10) + "</TD>\n</TR>\n"
+		subCadenaReporteTreeComplete += "<TR>\n<TD BGCOLOR='#ff8f80'>BLOQUE</TD><TD BGCOLOR='#ff8f80'>" + strconv.FormatInt(posicion+1, 10) + "</TD>\n</TR>\n"
 		var contenidoBloque string
 		for i1, valor1 := range bd.DbDato {
 			if bd.DbDato[i1] != 0 {

@@ -638,7 +638,7 @@ func FuncionMKDIR(vector []string) {
 			metodos.CrearDirectorio(parametros[0], parametros[1], false)
 		}
 	} else {
-		fmt.Println(red + "[ERROR]" + reset + "Los parametros de " + magenta + "RMUSR" + reset + " obligatorios no han sido completamente ingresados")
+		fmt.Println(red + "[ERROR]" + reset + "Los parametros de " + magenta + "MKDIR" + reset + " obligatorios no han sido completamente ingresados")
 	}
 }
 
