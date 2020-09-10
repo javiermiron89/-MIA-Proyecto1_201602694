@@ -236,6 +236,9 @@ func Verificar_Tipo(cadenaOrdenada []string) {
 		} else if strings.ToLower(mamarre) == "rmusr" {
 			fmt.Println(yellow + "Palabra reservada a ejecutar: " + magenta + "RMUSR" + reset)
 			funciones.FuncionRMUSR(cadenaOrdenada)
+		} else if strings.ToLower(mamarre) == "mkfile" {
+			fmt.Println(yellow + "Palabra reservada a ejecutar: " + magenta + "MKFILE" + reset)
+			funciones.FuncionMKFILE(cadenaOrdenada)
 		} else if strings.ToLower(mamarre) == "mkdir" {
 			fmt.Println(yellow + "Palabra reservada a ejecutar: " + magenta + "MKDIR" + reset)
 			funciones.FuncionMKDIR(cadenaOrdenada)

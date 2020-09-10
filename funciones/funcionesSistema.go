@@ -603,6 +603,69 @@ func FuncionRMUSR(vector []string) {
 //-------------------------------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------------------------------
+//MKFILE-----MKFILE-----FUNCIONES-----FUNCIONES-----MKFILE-----MKFILE-----FUNCIONES-----FUNCIONES-----MKFILE-----MKFILE-----FUNCIONES-----FUN
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+
+//FuncionMKFILE =
+func FuncionMKFILE(vector []string) {
+	var parametros [5]string //[0]id   [1]path	[2]-p	[3]size	[4]cont
+	var vecAuxiliar []string = nil
+	idObligatorio := false
+	pathObligatorio := false
+	pOpcional := false
+	sizeOpcional := false
+	contOpcional := false
+
+	for j := 1; j < len(vector); j++ {
+		vecAuxiliar = strings.SplitN(vector[j], "->", -1)
+		fmt.Println(vecAuxiliar)
+		if strings.ToLower(vecAuxiliar[0]) == "-id" {
+			parametros[0] = vecAuxiliar[1]
+			idObligatorio = true
+		} else if strings.ToLower(vecAuxiliar[0]) == "-path" {
+			parametros[1] = vecAuxiliar[1]
+			pathObligatorio = true
+		} else if strings.ToLower(vecAuxiliar[0]) == "-p" {
+			pOpcional = true
+		} else if strings.ToLower(vecAuxiliar[0]) == "-size" {
+			parametros[3] = vecAuxiliar[1]
+			sizeOpcional = true
+		} else if strings.ToLower(vecAuxiliar[0]) == "-cont" {
+			parametros[4] = vecAuxiliar[1]
+			contOpcional = true
+		}
+	}
+
+	if idObligatorio == true && pathObligatorio == true {
+		if sizeOpcional == true {
+			tamEnBytesArchivo, _ := strconv.ParseInt(parametros[3], 10, 64)
+			if tamEnBytesArchivo < 0 {
+				fmt.Println(red + "[ERROR]" + reset + "El parametro size tiene un valor negativo, por lo cual se procede a colocarse de tamaño 0 por defecto")
+				parametros[3] = "0"
+			}
+		} else {
+			parametros[3] = ""
+		}
+		if contOpcional == false {
+			parametros[4] = ""
+		}
+		if pOpcional == true {
+			metodos.CrearArchivo(parametros[0], parametros[1], true, parametros[3], parametros[4])
+		} else {
+			metodos.CrearArchivo(parametros[0], parametros[1], false, parametros[3], parametros[4])
+		}
+	} else {
+		fmt.Println(red + "[ERROR]" + reset + "Los parametros de " + magenta + "MKDIR" + reset + " obligatorios no han sido completamente ingresados")
+	}
+}
+
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
 //MKDIR-----MKDIR-----FUNCIONES-----FUNCIONES-----MKDIR-----MKDIR-----FUNCIONES-----FUNCIONES-----MKDIR-----MKDIR-----FUNCIONES-----FUNCIONES
 //-------------------------------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------------------------------
