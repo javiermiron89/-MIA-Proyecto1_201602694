@@ -44,6 +44,7 @@ func InitApp() {
 
 //FuncionMKDISK =
 func FuncionMKDISK(vector []string) {
+	//fmt.Println(vector)
 	var parametros [4]string //[0]SIZE   [1]PATH   [2]NAME   [3]UNIT
 	var vecAuxiliar []string = nil
 	sizeObligatorio := false
@@ -181,7 +182,7 @@ func FuncionFDISK(vector []string) {
 					parametros[2] = vecAuxiliar[1]
 					pathObligatorio = true
 				} else {
-					fmt.Println(red + "[ERROR]" + reset + "La carpeta que ha especificado no existe")
+					fmt.Println(red + "[ERROR]" + reset + "El disco que ha especificado no existe")
 					break
 				}
 			} else {
@@ -235,6 +236,12 @@ func FuncionFDISK(vector []string) {
 	}
 
 	//[0]SIZE   [1]UNIT   [2]PATH   [3]TYPE	[4]FIT	[5]DELETE	[6]NAME		[7]ADD
+	if deleteOpcional == true {
+		sizeObligatorio = true
+	}
+	if addOpcional == true {
+		sizeObligatorio = true
+	}
 
 	if sizeObligatorio == true && pathObligatorio == true && nameObligatorio == true {
 		if unitOpcional == false {
@@ -249,6 +256,7 @@ func FuncionFDISK(vector []string) {
 		if deleteOpcional == true && addOpcional == true {
 			fmt.Println(red + "[ERROR]" + reset + "Los parametros " + cyan + "[-delete]" + reset + " y " + cyan + "[-add]" + reset + " no son compatibles")
 		} else if deleteOpcional == true && addOpcional == false {
+			//fmt.Println("VOY A BORRAR UNA PARTICION")
 			metodos.EliminarParticion(parametros[2], parametros[6], parametros[5])
 		} else if deleteOpcional == false && addOpcional == true {
 			metodos.ModificarParticion()
@@ -256,8 +264,8 @@ func FuncionFDISK(vector []string) {
 			//size, unit, path, type2, fit, name string
 			if parametros[3] == "L" {
 				metodos.InsertarParticionLogica(parametros[2], parametros[6], parametros[0], parametros[4])
-				fmt.Println(red + "****************" + reset)
-				metodos.ResumenEBR(parametros[2], parametros[6])
+				//fmt.Println(red + "****************" + reset)
+				//metodos.ResumenEBR(parametros[2], parametros[6])
 			} else {
 				metodos.CrearParticion(parametros[0], parametros[1], parametros[2], parametros[3], parametros[4], parametros[6])
 			}
@@ -304,7 +312,6 @@ func FuncionMOUNT(vector []string) {
 	} else {
 		if pathObligatorio == true && nameObligatorio == true {
 			metodos.MontarParticion(parametros[0], parametros[1])
-			fmt.Println(green + "[EXITO]" + reset + "La particion " + cyan + parametros[1] + reset + " fue montado con exito")
 		} else {
 			fmt.Println(red + "[ERROR]" + reset + "Los parametros de " + magenta + "MOUNT" + reset + " obligatorios no han sido completamente ingresados")
 		}
@@ -709,6 +716,51 @@ func FuncionMKDIR(vector []string) {
 //-------------------------------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------------------------------
+//CHMOD-----CHMOD-----FUNCIONES-----FUNCIONES-----CHMOD-----CHMOD-----FUNCIONES-----FUNCIONES-----CHMOD-----CHMOD-----FUNCIONES-----FUNCIONES
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+
+//FuncionCHMOD =
+func FuncionCHMOD(vector []string) {
+	var parametros [4]string //[0]id   [1]path	[2]ugo		[3]r
+	var vecAuxiliar []string = nil
+	idObligatorio := false
+	pathObligatorio := false
+	ugoObligatorio := false
+	rOpcional := false
+
+	for j := 1; j < len(vector); j++ {
+		vecAuxiliar = strings.SplitN(vector[j], "->", -1)
+		fmt.Println(vecAuxiliar)
+		if strings.ToLower(vecAuxiliar[0]) == "-id" {
+			parametros[0] = vecAuxiliar[1]
+			idObligatorio = true
+		} else if strings.ToLower(vecAuxiliar[0]) == "-path" {
+			parametros[1] = vecAuxiliar[1]
+			pathObligatorio = true
+		} else if strings.ToLower(vecAuxiliar[0]) == "-ugo" {
+			parametros[2] = vecAuxiliar[1]
+			ugoObligatorio = true
+		} else if strings.ToLower(vecAuxiliar[0]) == "-r" {
+			rOpcional = true
+		}
+	}
+
+	if idObligatorio == true && pathObligatorio == true && ugoObligatorio == true {
+		if rOpcional == true {
+			metodos.MetodoCHMOD(parametros[0], parametros[1], parametros[2], true)
+		} else {
+
+		}
+	}
+}
+
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
 //REP-----REP-----FUNCIONES-----FUNCIONES-----REP-----REP-----FUNCIONES-----FUNCIONES-----REP-----REP-----FUNCIONES-----FUNCIONES-----REP----
 //-------------------------------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------------------------------
@@ -798,6 +850,8 @@ func FuncionREP(vector []string) {
 			metodos.ReporteBitmap(parametros[2], parametros[1], 3)
 		} else if parametros[0] == "BM_BLOCK" {
 			metodos.ReporteBitmap(parametros[2], parametros[1], 4)
+		} else if parametros[0] == "DIRECTORIO" {
+			metodos.ReporteDirectorio(parametros[2], parametros[1])
 		} else if parametros[0] == "TREE_COMPLETE" {
 			metodos.ReporteTreeComplete(parametros[2], parametros[1])
 		}

@@ -66,13 +66,13 @@ func Iniciar() {
 	//entrada se encarga de convertir
 	entrada, _ := lectorLinea.ReadString('\n') //_ sirve para no darle uso al segundo parametro
 
-	var mamarre string = entrada
+	mamarre := entrada
 
 	//fmt.Println("Cadena Ingresada :=" + mamarre)
 
 	palabras = nil
-	palabras = analizador.Iniciar_Analisis(mamarre)
-	analizador.Verificar_Tipo(palabras)
+	palabras = analizador.IniciarAnalisis(mamarre)
+	analizador.VerificarTipo(palabras)
 
 	//RecorrerVectorPalabras()
 	//fmt.Println(analizador.Global)

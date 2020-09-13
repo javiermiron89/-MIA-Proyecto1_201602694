@@ -39,8 +39,8 @@ func InitApp() string {
 	return Global
 }
 
-//Iniciar_Analisis =
-func Iniciar_Analisis(cadena string) []string {
+//IniciarAnalisis =
+func IniciarAnalisis(cadena string) []string {
 	cadenaDividida := strings.SplitN(cadena, " ", -1)
 
 	//fmt.Println("Inicia la cadena separada: ")
@@ -57,7 +57,9 @@ func Iniciar_Analisis(cadena string) []string {
 	//Este for se encarga de verificar el ultimo split y ver si tiene un salto de linea para eliminarlo
 	for i := 0; i < len(cadenaDividida); i++ {
 		if i == len(cadenaDividida)-1 {
+			//fmt.Println("Mamarre: ", cadenaDividida[i][len(cadenaDividida[i])-1:])
 			if (cadenaDividida[i][len(cadenaDividida[i])-1:]) == "\n" {
+				//fmt.Println("uts")
 				r := []rune(cadenaDividida[i])
 				cadenaDividida[i] = string(r[:len(r)-1])
 			}
@@ -73,10 +75,16 @@ func Iniciar_Analisis(cadena string) []string {
 		fmt.Println(red + "-------" + reset)
 	*/
 	if strings.Contains(cadena, "#") {
+		SaltoLinea()
 		fmt.Println(cyan + "COMENTARIO: " + reset + cadena)
 	} else {
 		for i := 0; i < len(cadenaDividida); i++ {
-			if strings.Contains(cadenaDividida[i], "\"") && encontreComilla == true {
+			contadorComillas := strings.Count(cadenaDividida[i], "\"")
+			if contadorComillas == 2 {
+				cadenaDividida[i] = strings.ReplaceAll(cadenaDividida[i], "\"", "")
+				temporal += cadenaDividida[i]
+				cadenaReordenadaDividida = append(cadenaReordenadaDividida, temporal)
+			} else if strings.Contains(cadenaDividida[i], "\"") && encontreComilla == true {
 				encontreComilla = false
 				cadenaDividida[i] = strings.ReplaceAll(cadenaDividida[i], "\"", "")
 				temporal += cadenaDividida[i]
@@ -117,7 +125,7 @@ func EjecutarLineas(cadena string) {
 		if cadenaDividida[i] == "" {
 			//fmt.Println(red + "ERROR" + reset)
 		} else {
-			Verificar_Tipo(Iniciar_Analisis(cadenaDividida[i]))
+			VerificarTipo(IniciarAnalisis(cadenaDividida[i]))
 		}
 		//fmt.Print(cadenaDividida[i])
 		//fmt.Print(yellow + " -> " + reset)
@@ -127,33 +135,23 @@ func EjecutarLineas(cadena string) {
 	//fmt.Println(magenta + "********************" + reset)
 }
 
-//Metodo_EXEC = Este metodo obtiene la ruta del archivo y lo abre
-func Metodo_EXEC(vector []string) string {
+//MetodoEXEC = Este metodo obtiene la ruta del archivo y lo abre
+func MetodoEXEC(vector []string) string {
 	var parametros [1]string //[0]PATH
 	var vecAuxiliar []string = nil
 
-	for i := 1; i < len(vector); i++ {
-		vecAuxiliar = strings.SplitN(vector[i], "->", -1)
-	}
-
-	/*
-		fmt.Println(green + "===================" + reset)
-		for i := 0; i < len(vecAuxiliar); i++ {
-			fmt.Print(vecAuxiliar[i])
-			fmt.Print(yellow + " -> " + reset)
-			fmt.Println(i)
-		}
-		fmt.Println(green + "===================" + reset)
-	*/
-	for j := 0; j < len(vecAuxiliar); j++ {
-		if strings.ToLower(vecAuxiliar[j]) == "-path" {
-			parametros[0] = vecAuxiliar[j+1]
+	for j := 1; j < len(vector); j++ {
+		vecAuxiliar = strings.SplitN(vector[j], "->", -1)
+		if strings.ToLower(vecAuxiliar[0]) == "-path" {
+			parametros[0] = vecAuxiliar[1]
 		}
 	}
 
+	fmt.Println("Ruta: " + parametros[0])
+	//file, error := os.OpenFile(parametros[0], os.O_RDWR, 0755)
 	file, error := os.Open(parametros[0])
 	if error != nil { //Valor nil quiere decir que no hay error
-		fmt.Println(red + "ERROR CRITIO AL INTENTAR ABRIR EL ARCHIVO" + reset)
+		fmt.Println(red + "ERROR CRITICO AL INTENTAR ABRIR EL ARCHIVO" + reset)
 		log.Fatal(error)
 	}
 	defer file.Close() //defer es la encargada de asegurar que una funcion es llamada (obliga a funcionar)
@@ -164,7 +162,7 @@ func Metodo_EXEC(vector []string) string {
 			reconstruido := strings.ReplaceAll(scanner.Text(), "\\*", "")
 			//fmt.Println(yellow + reconstruido + reset)
 			//fmt.Println(red + "SE ENCONTRO UN ERROR" + reset)
-			contenido += reconstruido + " "
+			contenido += reconstruido + ""
 		} else {
 			contenido += scanner.Text() + "\n"
 		}
@@ -180,17 +178,18 @@ func SaltoLinea() {
 	}
 }
 
-//Verificar_Tipo = Funcion encargada de verificar que comando se procede a ejecutar
-func Verificar_Tipo(cadenaOrdenada []string) {
+//VerificarTipo = Funcion encargada de verificar que comando se procede a ejecutar
+func VerificarTipo(cadenaOrdenada []string) {
 	if cadenaOrdenada == nil {
-		fmt.Println(red + "VECTOR VACIO" + reset)
+		//fmt.Println(red + "VECTOR VACIO" + reset)
 	} else {
 		var mamarre string = cadenaOrdenada[0]
 		//fmt.Println(cyan + mamarre + reset)
 		if strings.ToLower(mamarre) == "exec" {
 			SaltoLinea()
 			fmt.Println(yellow + "Palabra reservada a ejecutar: " + magenta + "EXEC" + reset)
-			var cadenaEXEC string = Metodo_EXEC(cadenaOrdenada)
+			var cadenaEXEC string = MetodoEXEC(cadenaOrdenada)
+			//fmt.Println(cadenaEXEC)
 			//var nuevoOrden []string = Iniciar_Analisis(cadenaEXEC)
 			EjecutarLineas(cadenaEXEC)
 		} else if strings.ToLower(mamarre) == "pause" {
@@ -207,45 +206,59 @@ func Verificar_Tipo(cadenaOrdenada []string) {
 			fmt.Println(yellow + "Palabra reservada a ejecutar: " + magenta + "RMDISK" + reset)
 			funciones.FuncionRMDISK(cadenaOrdenada)
 		} else if strings.ToLower(mamarre) == "fdisk" {
+			SaltoLinea()
 			fmt.Println(yellow + "Palabra reservada a ejecutar: " + magenta + "FDISK" + reset)
 			funciones.FuncionFDISK(cadenaOrdenada)
 		} else if strings.ToLower(mamarre) == "mount" {
+			SaltoLinea()
 			fmt.Println(yellow + "Palabra reservada a ejecutar: " + magenta + "MOUNT" + reset)
 			funciones.FuncionMOUNT(cadenaOrdenada)
 		} else if strings.ToLower(mamarre) == "unmount" {
+			SaltoLinea()
 			fmt.Println(yellow + "Palabra reservada a ejecutar: " + magenta + "UNMOUNT" + reset)
 			funciones.FuncionUNMOUNT(cadenaOrdenada)
 		} else if strings.ToLower(mamarre) == "mkfs" {
+			SaltoLinea()
 			fmt.Println(yellow + "Palabra reservada a ejecutar: " + magenta + "MKFS" + reset)
 			funciones.FuncionMKFS(cadenaOrdenada)
 		} else if strings.ToLower(mamarre) == "login" {
+			SaltoLinea()
 			fmt.Println(yellow + "Palabra reservada a ejecutar: " + magenta + "LOGIN" + reset)
 			funciones.FuncionLOGIN(cadenaOrdenada)
 		} else if strings.ToLower(mamarre) == "logout" {
+			SaltoLinea()
 			fmt.Println(yellow + "Palabra reservada a ejecutar: " + magenta + "LOGOUT" + reset)
 			metodos.FuncionLOGOUT()
 		} else if strings.ToLower(mamarre) == "mkgrp" {
+			SaltoLinea()
 			fmt.Println(yellow + "Palabra reservada a ejecutar: " + magenta + "MKGRP" + reset)
 			funciones.FuncionMKGRP(cadenaOrdenada)
 		} else if strings.ToLower(mamarre) == "rmgrp" {
+			SaltoLinea()
 			fmt.Println(yellow + "Palabra reservada a ejecutar: " + magenta + "RMGRP" + reset)
 			funciones.FuncionRMGRP(cadenaOrdenada)
 		} else if strings.ToLower(mamarre) == "mkusr" {
+			SaltoLinea()
 			fmt.Println(yellow + "Palabra reservada a ejecutar: " + magenta + "MKUSR" + reset)
 			funciones.FuncionMKUSR(cadenaOrdenada)
 		} else if strings.ToLower(mamarre) == "rmusr" {
+			SaltoLinea()
 			fmt.Println(yellow + "Palabra reservada a ejecutar: " + magenta + "RMUSR" + reset)
 			funciones.FuncionRMUSR(cadenaOrdenada)
 		} else if strings.ToLower(mamarre) == "mkfile" {
+			SaltoLinea()
 			fmt.Println(yellow + "Palabra reservada a ejecutar: " + magenta + "MKFILE" + reset)
 			funciones.FuncionMKFILE(cadenaOrdenada)
 		} else if strings.ToLower(mamarre) == "mkdir" {
+			SaltoLinea()
 			fmt.Println(yellow + "Palabra reservada a ejecutar: " + magenta + "MKDIR" + reset)
 			funciones.FuncionMKDIR(cadenaOrdenada)
 		} else if strings.ToLower(mamarre) == "rep" {
+			SaltoLinea()
 			fmt.Println(yellow + "Palabra reservada a ejecutar: " + magenta + "REP" + reset)
 			funciones.FuncionREP(cadenaOrdenada)
 		} else if strings.ToLower(mamarre) == "leer" {
+			SaltoLinea()
 			metodos.ResumenMBR("/home/javier/Imágenes/Disco1.dsk")
 		} else if strings.ToLower(mamarre) == "pruebita" {
 			funciones.FuncionPRUEBITA()
@@ -254,7 +267,7 @@ func Verificar_Tipo(cadenaOrdenada []string) {
 			fmt.Println(red + "NO SE INGRESO NINGUN PARAMETRO" + reset)
 		} else {
 			SaltoLinea()
-			fmt.Println(red + "ERROR: EL PARAMETRO NO ES VALIDO" + reset)
+			fmt.Println(red + "[ERROR]" + reset + "EL PARAMETRO " + cyan + mamarre + reset + " NO ES VALIDO" + reset)
 		}
 	}
 }

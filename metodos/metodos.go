@@ -450,6 +450,8 @@ type ARBOLVIRTUALDIRECTORIO struct {
 	AvdApDetalleDirectorio      int64
 	AvdApArbolVirtualDirectorio int64
 	AvdProper                   [10]byte
+	AvdGid                      [10]byte
+	AvdPerm                     [3]byte
 }
 
 //DETALLEDIRECTORIO =
@@ -474,6 +476,8 @@ type TABLAINODO struct {
 	IArrayBloques          [4]int64
 	IApIndirecto           int64
 	IIdProper              [10]byte
+	IGid                   [10]byte
+	IPerm                  [3]byte
 }
 
 //BLOQUEDATOS =
@@ -493,6 +497,7 @@ type BITACORA struct {
 //SESIONACTIVA =
 type SESIONACTIVA struct {
 	usuario string
+	grupo   string
 }
 
 //SesionActiva = Es un struct GLOBAL que almacena la sesion activa, para saber si en realidad
@@ -638,24 +643,38 @@ func EliminarDisco(path string) {
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		fmt.Println(red + "[ERROR]" + reset + "El archivo en la ruta especificada no existe")
 	} else {
-		for {
-			fmt.Println(yellow + "[ADVERTENCIA]" + reset + "REALMENTE DESEA ELIMINAR EL ARCHIVO?[y/n] ")
-			var tecla string
-			fmt.Scanln(&tecla)
-			if tecla == "y" {
-				err := os.Remove(path)
-				if err != nil {
-					//println(err)
-					fmt.Println(red + "[ERROR]" + reset + "El archivo no se ha podido eliminar")
-					break
-				} else {
-					fmt.Println(green + "[EXITO]" + reset + "El archivo ha sido eliminado con exito")
+		particionMontada := false
+
+		if len(ContenedorMount) != 0 {
+			for i := 0; i < len(ContenedorMount); i++ {
+				if ContenedorMount[i].Path == path {
+					particionMontada = true
 					break
 				}
-			} else if tecla == "n" {
-				break
-			} else {
-				fmt.Println(red + "-" + tecla + "-" + " no es una opcion valida, ingresa alguna de las opciones indicadas" + reset)
+			}
+		}
+		if particionMontada == true {
+			fmt.Println(red + "[ERROR]" + reset + "El disco en la ruta " + cyan + path + reset + " no se puede eliminar porque se encuentra montado")
+		} else {
+			for {
+				fmt.Println(yellow + "[ADVERTENCIA]" + reset + "REALMENTE DESEA ELIMINAR EL ARCHIVO?[y/n] ")
+				var tecla string
+				fmt.Scanln(&tecla)
+				if tecla == "y" || tecla == "Y" {
+					err := os.Remove(path)
+					if err != nil {
+						//println(err)
+						fmt.Println(red + "[ERROR]" + reset + "El archivo no se ha podido eliminar")
+						break
+					} else {
+						fmt.Println(green + "[EXITO]" + reset + "El archivo ha sido eliminado con exito")
+						break
+					}
+				} else if tecla == "n" || tecla == "N" {
+					break
+				} else {
+					fmt.Println(red + "-" + tecla + "-" + " no es una opcion valida, ingresa alguna de las opciones indicadas" + reset)
+				}
 			}
 		}
 	}
@@ -702,39 +721,132 @@ func CrearParticion(size, unit, path, type2, fit, name string) {
 			fmt.Println(red + "[ERROR]" + reset + "Ya existe una particion con este nombre")
 		}
 
-		//Se obtiene el valor total de espacio libre en el disco
-		if tamanoParticion > espacioLibreTotal {
-			fmt.Println("T PARTICION:", tamanoParticion)
-			fmt.Println("T ESPACIO LIBRE:", espacioLibreTotal)
-			fmt.Println(red + "[ERROR]" + reset + "El tamaño de la particion supera el espacio disponible en el disco")
-		} else {
-
+		//********************************************************
+		//Se verifica si todas las particiones estan vacias para
+		//hacer el calculo de tamaño global
+		//********************************************************
+		espacioBasicoSuficiente := true
+		esPrimeraParticionDelDisco := false
+		if mbr.MbrPartition1.PartStatus == 1 && mbr.MbrPartition2.PartStatus == 1 && mbr.MbrPartition3.PartStatus == 1 && mbr.MbrPartition4.PartStatus == 1 {
+			if tamanoParticion > espacioLibreTotal {
+				espacioBasicoSuficiente = false
+				fmt.Println(red+"[ERROR]"+reset+"El tamaño de la particion ("+cyan, tamanoParticion, reset+") supera el espacio disponible en el disco ("+cyan, espacioLibreTotal, reset+")")
+			}
+			esPrimeraParticionDelDisco = true
 		}
 
 		//Si no existe extendida puede pasar, independientemente de si es Logica, Primario o Extendida
-		if existeExtendida == false && existeNombre == false {
-			//Verifica el espacio disponible total
-			if mbr.MbrPartition1.PartStatus == 0 {
-				espacioLibreTotal = espacioLibreTotal - mbr.MbrPartition1.PartSize
-			}
-			if mbr.MbrPartition2.PartStatus == 0 {
-				espacioLibreTotal = espacioLibreTotal - mbr.MbrPartition2.PartSize
-			}
-			if mbr.MbrPartition3.PartStatus == 0 {
-				espacioLibreTotal = espacioLibreTotal - mbr.MbrPartition3.PartSize
-			}
-			if mbr.MbrPartition4.PartStatus == 0 {
-				espacioLibreTotal = espacioLibreTotal - mbr.MbrPartition4.PartSize
-			}
-
+		if existeExtendida == false && existeNombre == false && espacioBasicoSuficiente == true {
+			//********************************************************
 			//Se hace el calculo del tamaño de la particion a crear
+			//********************************************************
 			if unit == "K" {
 				tamanoParticion = tamanoParticion * 1024
 			} else if unit == "M" {
 				tamanoParticion = tamanoParticion * 1024 * 1024
 			}
+			//********************************************************
+			//Se realiza el calculo de ver si existe espacio en las
+			//particiones y en cual se debe colocar
+			//********************************************************
+			var verificadorEspacioLibre int64
+			escribirEnParticion1 := false
+			escribirEnParticion2 := false
+			escribirEnParticion3 := false
+			escribirEnParticion4 := false
 
-			if mbr.MbrPartition1.PartStatus == 1 {
+			var resumenTamano int64
+			resumenTamano = espacioLibreTotal
+			if mbr.MbrPartition1.PartStatus == 0 {
+				resumenTamano -= mbr.MbrPartition1.PartSize
+			}
+			if mbr.MbrPartition2.PartStatus == 0 {
+				resumenTamano -= mbr.MbrPartition2.PartSize
+			}
+			if mbr.MbrPartition3.PartStatus == 0 {
+				resumenTamano -= mbr.MbrPartition3.PartSize
+			}
+			if mbr.MbrPartition4.PartStatus == 0 {
+				resumenTamano -= mbr.MbrPartition4.PartSize
+			}
+
+			if resumenTamano < tamanoParticion {
+				fmt.Println(red + "[ERROR]" + reset + "El tamaño de la particion supera le espacio restante de la particion")
+			} else {
+
+				if esPrimeraParticionDelDisco == true {
+					escribirEnParticion1 = true
+				} else {
+					if mbr.MbrPartition1.PartStatus == 1 {
+						verificadorEspacioLibre = 0
+						if mbr.MbrPartition2.PartStatus == 0 {
+							verificadorEspacioLibre = (mbr.MbrPartition2.PartStart - int64(unsafe.Sizeof(mbr)))
+						} else {
+							if mbr.MbrPartition3.PartStatus == 0 {
+								verificadorEspacioLibre = (mbr.MbrPartition3.PartStart - int64(unsafe.Sizeof(mbr)))
+							} else {
+								if mbr.MbrPartition4.PartStatus == 0 {
+									verificadorEspacioLibre = (mbr.MbrPartition4.PartStart - int64(unsafe.Sizeof(mbr)))
+								} else {
+
+								}
+							}
+						}
+						fmt.Println(verificadorEspacioLibre)
+						if verificadorEspacioLibre >= tamanoParticion {
+							escribirEnParticion1 = true
+							//fmt.Println("VOY A ESCRIBIR EN 1")
+						}
+					}
+					if mbr.MbrPartition2.PartStatus == 1 && escribirEnParticion1 == false {
+						verificadorEspacioLibre = espacioLibreTotal + int64(unsafe.Sizeof(mbr))
+						espacioUsadoPorParticionAnterior := (mbr.MbrPartition1.PartStart + mbr.MbrPartition1.PartSize)
+						if mbr.MbrPartition3.PartStatus == 0 {
+							verificadorEspacioLibre = mbr.MbrPartition3.PartStart
+						} else {
+							if mbr.MbrPartition4.PartStatus == 0 {
+								verificadorEspacioLibre = mbr.MbrPartition4.PartStart
+							} else {
+
+							}
+						}
+						verificadorEspacioLibre -= espacioUsadoPorParticionAnterior
+						//fmt.Println(verificadorEspacioLibre)
+						//fmt.Println(tamanoParticion)
+						if verificadorEspacioLibre >= tamanoParticion {
+							escribirEnParticion2 = true
+							//fmt.Println("VOY A ESCRIBIR EN 2")
+						}
+					}
+					if mbr.MbrPartition3.PartStatus == 1 && escribirEnParticion1 == false && escribirEnParticion2 == false {
+						verificadorEspacioLibre = espacioLibreTotal + int64(unsafe.Sizeof(mbr))
+						espacioUsadoPorParticionAnterior := (mbr.MbrPartition2.PartStart + mbr.MbrPartition2.PartSize)
+						if mbr.MbrPartition4.PartStatus == 0 {
+							verificadorEspacioLibre = mbr.MbrPartition4.PartStart
+						}
+						verificadorEspacioLibre -= espacioUsadoPorParticionAnterior
+						if verificadorEspacioLibre >= tamanoParticion {
+							escribirEnParticion3 = true
+							//fmt.Println("VOY A ESCRIBIR EN 3")
+						}
+					}
+					if mbr.MbrPartition4.PartStatus == 1 && escribirEnParticion1 == false && escribirEnParticion2 == false && escribirEnParticion3 == false {
+						verificadorEspacioLibre = espacioLibreTotal + int64(unsafe.Sizeof(mbr))
+						espacioUsadoPorParticionAnterior := mbr.MbrPartition3.PartStart + mbr.MbrPartition3.PartSize
+						verificadorEspacioLibre -= espacioUsadoPorParticionAnterior
+						//fmt.Println(verificadorEspacioLibre)
+						//fmt.Println(tamanoParticion)
+						if verificadorEspacioLibre >= tamanoParticion {
+							escribirEnParticion4 = true
+							//fmt.Println("VOY A ESCRIBIR EN 4")
+						}
+					}
+				}
+			}
+
+			siEscribiLaParticion := false
+
+			if mbr.MbrPartition1.PartStatus == 1 && escribirEnParticion1 == true {
 				//INGRESA SEGUN SEA SU TIPO DE PARTICION
 				esExtendida := false
 				mbr.MbrPartition1.PartStatus = 0
@@ -747,39 +859,27 @@ func CrearParticion(size, unit, path, type2, fit, name string) {
 				var conversorFit [1]byte
 				copy(conversorFit[:], fit)
 				mbr.MbrPartition1.PartFit = conversorFit[0]
-				mbr.MbrPartition1.PartStart = int64(unsafe.Sizeof(mbr) + 1)
+				//mbr.MbrPartition1.PartStart = int64(unsafe.Sizeof(mbr)) + 1
+				mbr.MbrPartition1.PartStart = int64(unsafe.Sizeof(mbr))
 				mbr.MbrPartition1.PartSize = tamanoParticion
 				var conversorName [16]byte
 				copy(conversorName[:], name)
 				mbr.MbrPartition1.PartName = conversorName
 
-				/*
-					fmt.Println(cyan + "----------" + reset)
-					fmt.Println(mbr.MbrTamano)
-					fmt.Println(mbr.MbrFechaCreacion)
-					fmt.Println(mbr.MbrDiskSignature)
-					fmt.Println(magenta + "----------" + reset)
-					fmt.Println(mbr.MbrPartition1.PartStatus)
-					fmt.Println(mbr.MbrPartition1.PartType)
-					fmt.Println(mbr.MbrPartition1.PartFit)
-					fmt.Println(mbr.MbrPartition1.PartStart)
-					fmt.Println(mbr.MbrPartition1.PartSize)
-					fmt.Println(mbr.MbrPartition1.PartName)
-					fmt.Println(magenta + "----------" + reset)
-				*/
-
 				ActualizarMBREInsertarParticion(path, &mbr, '1')
-				fmt.Println(green + "[EXITO]" + reset + "La particion ha sido creada con exito")
-
+				fmt.Println(green + "[EXITO]" + reset + "La particion" + cyan + name + reset + " ha sido creada con exito")
+				siEscribiLaParticion = true
 				if esExtendida == true {
 					CrearPrimerEBR(path, mbr.MbrPartition1.PartStart)
-					var ebr2 EBR = leerEBR(path, mbr.MbrPartition1.PartStart)
+					/*
+						var ebr2 EBR = leerEBR(path, mbr.MbrPartition1.PartStart)
 
-					if ebr2.PartStatus == 1 {
-						fmt.Println("MAMARRRRRRREEEEEEEEEEEEEEEEE")
-					}
+						if ebr2.PartStatus == 1 {
+							fmt.Println("MAMARRRRRRREEEEEEEEEEEEEEEEE")
+						}
+					*/
 				}
-			} else if mbr.MbrPartition2.PartStatus == 1 {
+			} else if mbr.MbrPartition2.PartStatus == 1 && escribirEnParticion2 == true {
 				//INGRESA SEGUN SEA SU TIPO DE PARTICION
 				esExtendida := false
 				mbr.MbrPartition2.PartStatus = 0
@@ -792,19 +892,21 @@ func CrearParticion(size, unit, path, type2, fit, name string) {
 				var conversorFit [1]byte
 				copy(conversorFit[:], fit)
 				mbr.MbrPartition2.PartFit = conversorFit[0]
-				mbr.MbrPartition2.PartStart = mbr.MbrPartition1.PartStart + mbr.MbrPartition1.PartSize + 1
+				//mbr.MbrPartition2.PartStart = mbr.MbrPartition1.PartStart + mbr.MbrPartition1.PartSize + 1
+				mbr.MbrPartition2.PartStart = mbr.MbrPartition1.PartStart + mbr.MbrPartition1.PartSize
 				mbr.MbrPartition2.PartSize = tamanoParticion
 				var conversorName [16]byte
 				copy(conversorName[:], name)
 				mbr.MbrPartition2.PartName = conversorName
 
 				ActualizarMBREInsertarParticion(path, &mbr, '2')
-				fmt.Println(green + "[EXITO]" + reset + "La particion ha sido creada con exito")
+				fmt.Println(green + "[EXITO]" + reset + "La particion" + cyan + name + reset + " ha sido creada con exito")
+				siEscribiLaParticion = true
 
 				if esExtendida == true {
 					CrearPrimerEBR(path, mbr.MbrPartition2.PartStart)
 				}
-			} else if mbr.MbrPartition3.PartStatus == 1 {
+			} else if mbr.MbrPartition3.PartStatus == 1 && escribirEnParticion3 == true {
 				//INGRESA SEGUN SEA SU TIPO DE PARTICION]
 				esExtendida := false
 				mbr.MbrPartition3.PartStatus = 0
@@ -817,19 +919,21 @@ func CrearParticion(size, unit, path, type2, fit, name string) {
 				var conversorFit [1]byte
 				copy(conversorFit[:], fit)
 				mbr.MbrPartition3.PartFit = conversorFit[0]
-				mbr.MbrPartition3.PartStart = mbr.MbrPartition2.PartStart + mbr.MbrPartition2.PartSize + 1
+				//mbr.MbrPartition3.PartStart = mbr.MbrPartition2.PartStart + mbr.MbrPartition2.PartSize + 1
+				mbr.MbrPartition3.PartStart = mbr.MbrPartition2.PartStart + mbr.MbrPartition2.PartSize
 				mbr.MbrPartition3.PartSize = tamanoParticion
 				var conversorName [16]byte
 				copy(conversorName[:], name)
 				mbr.MbrPartition3.PartName = conversorName
 
 				ActualizarMBREInsertarParticion(path, &mbr, '3')
-				fmt.Println(green + "[EXITO]" + reset + "La particion ha sido creada con exito")
+				fmt.Println(green + "[EXITO]" + reset + "La particion" + cyan + name + reset + " ha sido creada con exito")
+				siEscribiLaParticion = true
 
 				if esExtendida == true {
 					CrearPrimerEBR(path, mbr.MbrPartition3.PartStart)
 				}
-			} else if mbr.MbrPartition4.PartStatus == 1 {
+			} else if mbr.MbrPartition4.PartStatus == 1 && escribirEnParticion4 == true {
 				//INGRESA SEGUN SEA SU TIPO DE PARTICION
 				esExtendida := false
 				mbr.MbrPartition4.PartStatus = 0
@@ -842,18 +946,23 @@ func CrearParticion(size, unit, path, type2, fit, name string) {
 				var conversorFit [1]byte
 				copy(conversorFit[:], fit)
 				mbr.MbrPartition4.PartFit = conversorFit[0]
-				mbr.MbrPartition4.PartStart = mbr.MbrPartition3.PartStart + mbr.MbrPartition3.PartSize + 1
+				//mbr.MbrPartition4.PartStart = mbr.MbrPartition3.PartStart + mbr.MbrPartition3.PartSize + 1
+				mbr.MbrPartition4.PartStart = mbr.MbrPartition3.PartStart + mbr.MbrPartition3.PartSize
 				mbr.MbrPartition4.PartSize = tamanoParticion
 				var conversorName [16]byte
 				copy(conversorName[:], name)
 				mbr.MbrPartition4.PartName = conversorName
 
 				ActualizarMBREInsertarParticion(path, &mbr, '4')
-				fmt.Println(green + "[EXITO]" + reset + "La particion ha sido creada con exito")
+				fmt.Println(green + "[EXITO]" + reset + "La particion" + cyan + name + reset + " ha sido creada con exito")
+				siEscribiLaParticion = true
 
 				if esExtendida == true {
 					CrearPrimerEBR(path, mbr.MbrPartition4.PartStart)
 				}
+			}
+			if siEscribiLaParticion == false {
+				fmt.Println(red + "[ERROR]" + reset + "La particion no fue agregada por falta de espacio")
 			}
 		}
 	}
@@ -867,185 +976,207 @@ func EliminarParticion(path, name, fit string) {
 	if err != nil {
 		fmt.Println(red + "[ERROR]" + reset + "No se ha podido abrir el archivo")
 	}
+	particionMontada := false
 
-	var nombreAByte16 [16]byte
-	copy(nombreAByte16[:], name)
-	if nombreAByte16 == mbr.MbrPartition1.PartName {
-		if fit == "FAST" {
-			//Se reescribe el Struct MBR
-			mbr.MbrPartition1.PartStatus = 1
-			mbr.MbrPartition1.PartType = 0
-			mbr.MbrPartition1.PartFit = 0
-			mbr.MbrPartition1.PartStart = 0
-			mbr.MbrPartition1.PartSize = 0
-			var reinicio [16]byte
-			mbr.MbrPartition1.PartName = reinicio
-
-			file.Seek(0, 0)
-			//Se reescribe el Struct MBR
-			var binario3 bytes.Buffer
-			binary.Write(&binario3, binary.BigEndian, mbr)
-			escribirBytes(file, binario3.Bytes())
-		} else if fit == "FULL" {
-			//Se reescribe con 0's toda la particion
-			file.Seek(mbr.MbrPartition1.PartStart, 0)
-			for i := 0; i < int(mbr.MbrPartition1.PartSize); i++ {
-				numero := byte(0)
-				var valorBinario bytes.Buffer
-				binary.Write(&valorBinario, binary.BigEndian, &numero)
-				escribirBytes(file, valorBinario.Bytes())
+	if len(ContenedorMount) != 0 {
+		for i := 0; i < len(ContenedorMount); i++ {
+			if ContenedorMount[i].NombreParticion == name && ContenedorMount[i].Path == path {
+				particionMontada = true
+				break
 			}
-
-			//Se reescribe el Struct MBR
-			mbr.MbrPartition1.PartStatus = 1
-			mbr.MbrPartition1.PartType = 0
-			mbr.MbrPartition1.PartFit = 0
-			mbr.MbrPartition1.PartStart = 0
-			mbr.MbrPartition1.PartSize = 0
-			var reinicio [16]byte
-			mbr.MbrPartition1.PartName = reinicio
-
-			file.Seek(0, 0)
-			var binario3 bytes.Buffer
-			binary.Write(&binario3, binary.BigEndian, mbr)
-			escribirBytes(file, binario3.Bytes())
-		} else {
-			fmt.Println(red + "[ERROR]" + reset + "El tipo de formateo no esta r")
 		}
-	} else if nombreAByte16 == mbr.MbrPartition2.PartName {
-		if fit == "FAST" {
-			//Se reescribe el Struct MBR
-			mbr.MbrPartition2.PartStatus = 1
-			mbr.MbrPartition2.PartType = 0
-			mbr.MbrPartition2.PartFit = 0
-			mbr.MbrPartition2.PartStart = 0
-			mbr.MbrPartition2.PartSize = 0
-			var reinicio [16]byte
-			mbr.MbrPartition2.PartName = reinicio
+	}
 
-			file.Seek(0, 0)
-			//Se reescribe el Struct MBR
-			var binario3 bytes.Buffer
-			binary.Write(&binario3, binary.BigEndian, mbr)
-			escribirBytes(file, binario3.Bytes())
-		} else if fit == "FULL" {
-			//Se reescribe con 0's toda la particion
-			file.Seek(mbr.MbrPartition2.PartStart, 0)
-			for i := 0; i < int(mbr.MbrPartition2.PartSize); i++ {
-				numero := byte(0)
-				var valorBinario bytes.Buffer
-				binary.Write(&valorBinario, binary.BigEndian, &numero)
-				escribirBytes(file, valorBinario.Bytes())
-			}
-
-			//Se reescribe el Struct MBR
-			mbr.MbrPartition2.PartStatus = 1
-			mbr.MbrPartition2.PartType = 0
-			mbr.MbrPartition2.PartFit = 0
-			mbr.MbrPartition2.PartStart = 0
-			mbr.MbrPartition2.PartSize = 0
-			var reinicio [16]byte
-			mbr.MbrPartition2.PartName = reinicio
-
-			file.Seek(0, 0)
-			var binario3 bytes.Buffer
-			binary.Write(&binario3, binary.BigEndian, mbr)
-			escribirBytes(file, binario3.Bytes())
-		} else {
-			fmt.Println(red + "[ERROR]" + reset + "El tipo de formateo no esta r")
-		}
-	} else if nombreAByte16 == mbr.MbrPartition3.PartName {
-		if fit == "FAST" {
-			//Se reescribe el Struct MBR
-			mbr.MbrPartition3.PartStatus = 1
-			mbr.MbrPartition3.PartType = 0
-			mbr.MbrPartition3.PartFit = 0
-			mbr.MbrPartition3.PartStart = 0
-			mbr.MbrPartition3.PartSize = 0
-			var reinicio [16]byte
-			mbr.MbrPartition3.PartName = reinicio
-
-			file.Seek(0, 0)
-			//Se reescribe el Struct MBR
-			var binario3 bytes.Buffer
-			binary.Write(&binario3, binary.BigEndian, mbr)
-			escribirBytes(file, binario3.Bytes())
-		} else if fit == "FULL" {
-			//Se reescribe con 0's toda la particion
-			file.Seek(mbr.MbrPartition3.PartStart, 0)
-			for i := 0; i < int(mbr.MbrPartition3.PartSize); i++ {
-				numero := byte(0)
-				var valorBinario bytes.Buffer
-				binary.Write(&valorBinario, binary.BigEndian, &numero)
-				escribirBytes(file, valorBinario.Bytes())
-			}
-
-			//Se reescribe el Struct MBR
-			mbr.MbrPartition3.PartStatus = 1
-			mbr.MbrPartition3.PartType = 0
-			mbr.MbrPartition3.PartFit = 0
-			mbr.MbrPartition3.PartStart = 0
-			mbr.MbrPartition3.PartSize = 0
-			var reinicio [16]byte
-			mbr.MbrPartition3.PartName = reinicio
-
-			file.Seek(0, 0)
-			var binario3 bytes.Buffer
-			binary.Write(&binario3, binary.BigEndian, mbr)
-			escribirBytes(file, binario3.Bytes())
-		} else {
-			fmt.Println(red + "[ERROR]" + reset + "El tipo de formateo no esta r")
-		}
-	} else if nombreAByte16 == mbr.MbrPartition4.PartName {
-		if fit == "FAST" {
-			//Se reescribe el Struct MBR
-			mbr.MbrPartition4.PartStatus = 1
-			mbr.MbrPartition4.PartType = 0
-			mbr.MbrPartition4.PartFit = 0
-			mbr.MbrPartition4.PartStart = 0
-			mbr.MbrPartition4.PartSize = 0
-			var reinicio [16]byte
-			mbr.MbrPartition4.PartName = reinicio
-
-			file.Seek(0, 0)
-			//Se reescribe el Struct MBR
-			var binario3 bytes.Buffer
-			binary.Write(&binario3, binary.BigEndian, mbr)
-			escribirBytes(file, binario3.Bytes())
-		} else if fit == "FULL" {
-			//Se reescribe con 0's toda la particion
-			file.Seek(mbr.MbrPartition4.PartStart, 0)
-			for i := 0; i < int(mbr.MbrPartition4.PartSize); i++ {
-				numero := byte(0)
-				var valorBinario bytes.Buffer
-				binary.Write(&valorBinario, binary.BigEndian, &numero)
-				escribirBytes(file, valorBinario.Bytes())
-			}
-
-			//Se reescribe el Struct MBR
-			mbr.MbrPartition4.PartStatus = 1
-			mbr.MbrPartition4.PartType = 0
-			mbr.MbrPartition4.PartFit = 0
-			mbr.MbrPartition4.PartStart = 0
-			mbr.MbrPartition4.PartSize = 0
-			var reinicio [16]byte
-			mbr.MbrPartition4.PartName = reinicio
-
-			file.Seek(0, 0)
-			var binario3 bytes.Buffer
-			binary.Write(&binario3, binary.BigEndian, mbr)
-			escribirBytes(file, binario3.Bytes())
-		} else {
-			fmt.Println(red + "[ERROR]" + reset + "El tipo de formateo no esta r")
-		}
+	if particionMontada == true {
+		fmt.Println(red + "[ERROR]" + reset + "La particion " + cyan + name + reset + " no se puede eliminar porque se encuentra montada")
 	} else {
-		fmt.Println(red + "[ERROR]" + reset + "No existe la particion a eliminar")
+		var nombreAByte16 [16]byte
+		copy(nombreAByte16[:], name)
+		if nombreAByte16 == mbr.MbrPartition1.PartName {
+			if fit == "FAST" {
+				//Se reescribe el Struct MBR
+				mbr.MbrPartition1.PartStatus = 1
+				mbr.MbrPartition1.PartType = 0
+				mbr.MbrPartition1.PartFit = 0
+				mbr.MbrPartition1.PartStart = 0
+				mbr.MbrPartition1.PartSize = 0
+				var reinicio [16]byte
+				mbr.MbrPartition1.PartName = reinicio
+
+				file.Seek(0, 0)
+				//Se reescribe el Struct MBR
+				var binario3 bytes.Buffer
+				binary.Write(&binario3, binary.BigEndian, mbr)
+				escribirBytes(file, binario3.Bytes())
+				fmt.Println(green + "[EXITO]" + reset + "Particion " + cyan + name + reset + " eliminada con exito")
+			} else if fit == "FULL" {
+				//Se reescribe con 0's toda la particion
+				file.Seek(mbr.MbrPartition1.PartStart, 0)
+				for i := 0; i < int(mbr.MbrPartition1.PartSize); i++ {
+					numero := byte(0)
+					var valorBinario bytes.Buffer
+					binary.Write(&valorBinario, binary.BigEndian, &numero)
+					escribirBytes(file, valorBinario.Bytes())
+				}
+
+				//Se reescribe el Struct MBR
+				mbr.MbrPartition1.PartStatus = 1
+				mbr.MbrPartition1.PartType = 0
+				mbr.MbrPartition1.PartFit = 0
+				mbr.MbrPartition1.PartStart = 0
+				mbr.MbrPartition1.PartSize = 0
+				var reinicio [16]byte
+				mbr.MbrPartition1.PartName = reinicio
+
+				file.Seek(0, 0)
+				var binario3 bytes.Buffer
+				binary.Write(&binario3, binary.BigEndian, mbr)
+				escribirBytes(file, binario3.Bytes())
+				fmt.Println(green + "[EXITO]" + reset + "Particion " + cyan + name + reset + " eliminada con exito")
+			} else {
+				fmt.Println(red + "[ERROR]" + reset + "El tipo de formateo no esta registrado")
+			}
+		} else if nombreAByte16 == mbr.MbrPartition2.PartName {
+			if fit == "FAST" {
+				//Se reescribe el Struct MBR
+				mbr.MbrPartition2.PartStatus = 1
+				mbr.MbrPartition2.PartType = 0
+				mbr.MbrPartition2.PartFit = 0
+				mbr.MbrPartition2.PartStart = 0
+				mbr.MbrPartition2.PartSize = 0
+				var reinicio [16]byte
+				mbr.MbrPartition2.PartName = reinicio
+
+				file.Seek(0, 0)
+				//Se reescribe el Struct MBR
+				var binario3 bytes.Buffer
+				binary.Write(&binario3, binary.BigEndian, mbr)
+				escribirBytes(file, binario3.Bytes())
+				fmt.Println(green + "[EXITO]" + reset + "Particion " + cyan + name + reset + " eliminada con exito")
+			} else if fit == "FULL" {
+				//Se reescribe con 0's toda la particion
+				file.Seek(mbr.MbrPartition2.PartStart, 0)
+				for i := 0; i < int(mbr.MbrPartition2.PartSize); i++ {
+					numero := byte(0)
+					var valorBinario bytes.Buffer
+					binary.Write(&valorBinario, binary.BigEndian, &numero)
+					escribirBytes(file, valorBinario.Bytes())
+				}
+
+				//Se reescribe el Struct MBR
+				mbr.MbrPartition2.PartStatus = 1
+				mbr.MbrPartition2.PartType = 0
+				mbr.MbrPartition2.PartFit = 0
+				mbr.MbrPartition2.PartStart = 0
+				mbr.MbrPartition2.PartSize = 0
+				var reinicio [16]byte
+				mbr.MbrPartition2.PartName = reinicio
+
+				file.Seek(0, 0)
+				var binario3 bytes.Buffer
+				binary.Write(&binario3, binary.BigEndian, mbr)
+				escribirBytes(file, binario3.Bytes())
+				fmt.Println(green + "[EXITO]" + reset + "Particion " + cyan + name + reset + " eliminada con exito")
+			} else {
+				fmt.Println(red + "[ERROR]" + reset + "El tipo de formateo no esta registrado")
+			}
+		} else if nombreAByte16 == mbr.MbrPartition3.PartName {
+			if fit == "FAST" {
+				//Se reescribe el Struct MBR
+				mbr.MbrPartition3.PartStatus = 1
+				mbr.MbrPartition3.PartType = 0
+				mbr.MbrPartition3.PartFit = 0
+				mbr.MbrPartition3.PartStart = 0
+				mbr.MbrPartition3.PartSize = 0
+				var reinicio [16]byte
+				mbr.MbrPartition3.PartName = reinicio
+
+				file.Seek(0, 0)
+				//Se reescribe el Struct MBR
+				var binario3 bytes.Buffer
+				binary.Write(&binario3, binary.BigEndian, mbr)
+				escribirBytes(file, binario3.Bytes())
+				fmt.Println(green + "[EXITO]" + reset + "Particion " + cyan + name + reset + " eliminada con exito")
+			} else if fit == "FULL" {
+				//Se reescribe con 0's toda la particion
+				file.Seek(mbr.MbrPartition3.PartStart, 0)
+				for i := 0; i < int(mbr.MbrPartition3.PartSize); i++ {
+					numero := byte(0)
+					var valorBinario bytes.Buffer
+					binary.Write(&valorBinario, binary.BigEndian, &numero)
+					escribirBytes(file, valorBinario.Bytes())
+				}
+
+				//Se reescribe el Struct MBR
+				mbr.MbrPartition3.PartStatus = 1
+				mbr.MbrPartition3.PartType = 0
+				mbr.MbrPartition3.PartFit = 0
+				mbr.MbrPartition3.PartStart = 0
+				mbr.MbrPartition3.PartSize = 0
+				var reinicio [16]byte
+				mbr.MbrPartition3.PartName = reinicio
+
+				file.Seek(0, 0)
+				var binario3 bytes.Buffer
+				binary.Write(&binario3, binary.BigEndian, mbr)
+				escribirBytes(file, binario3.Bytes())
+				fmt.Println(green + "[EXITO]" + reset + "Particion " + cyan + name + reset + " eliminada con exito")
+			} else {
+				fmt.Println(red + "[ERROR]" + reset + "El tipo de formateo no esta r")
+			}
+		} else if nombreAByte16 == mbr.MbrPartition4.PartName {
+			if fit == "FAST" {
+				//Se reescribe el Struct MBR
+				mbr.MbrPartition4.PartStatus = 1
+				mbr.MbrPartition4.PartType = 0
+				mbr.MbrPartition4.PartFit = 0
+				mbr.MbrPartition4.PartStart = 0
+				mbr.MbrPartition4.PartSize = 0
+				var reinicio [16]byte
+				mbr.MbrPartition4.PartName = reinicio
+
+				file.Seek(0, 0)
+				//Se reescribe el Struct MBR
+				var binario3 bytes.Buffer
+				binary.Write(&binario3, binary.BigEndian, mbr)
+				escribirBytes(file, binario3.Bytes())
+				fmt.Println(green + "[EXITO]" + reset + "Particion " + cyan + name + reset + " eliminada con exito")
+			} else if fit == "FULL" {
+				//Se reescribe con 0's toda la particion
+				file.Seek(mbr.MbrPartition4.PartStart, 0)
+				for i := 0; i < int(mbr.MbrPartition4.PartSize); i++ {
+					numero := byte(0)
+					var valorBinario bytes.Buffer
+					binary.Write(&valorBinario, binary.BigEndian, &numero)
+					escribirBytes(file, valorBinario.Bytes())
+				}
+
+				//Se reescribe el Struct MBR
+				mbr.MbrPartition4.PartStatus = 1
+				mbr.MbrPartition4.PartType = 0
+				mbr.MbrPartition4.PartFit = 0
+				mbr.MbrPartition4.PartStart = 0
+				mbr.MbrPartition4.PartSize = 0
+				var reinicio [16]byte
+				mbr.MbrPartition4.PartName = reinicio
+
+				file.Seek(0, 0)
+				var binario3 bytes.Buffer
+				binary.Write(&binario3, binary.BigEndian, mbr)
+				escribirBytes(file, binario3.Bytes())
+				fmt.Println(green + "[EXITO]" + reset + "Particion " + cyan + name + reset + " eliminada con exito")
+			} else {
+				fmt.Println(red + "[ERROR]" + reset + "El tipo de formateo no esta r")
+			}
+		} else {
+			fmt.Println(red + "[ERROR]" + reset + "No existe la particion a eliminar")
+		}
 	}
 }
 
 //ModificarParticion =
 func ModificarParticion() {
-	fmt.Println("SOY MODIFICAR PARTICION")
+	fmt.Println("[MODIFICAR PARTICION] Seguimos trabajando")
 }
 
 //ActualizarMBREInsertarParticion =
@@ -1155,6 +1286,7 @@ func InsertarParticionLogica(path, name, size, fit string) {
 	}
 
 	var tamEBR int64 = int64(binary.Size(ebr))
+	fmt.Println("Tamano EBR: ", tamEBR)
 	var contadorLogica int64 = 0
 	var sumadorStart int64 = ebr.PartStart
 	var ebrAnterior EBR
@@ -1167,7 +1299,7 @@ func InsertarParticionLogica(path, name, size, fit string) {
 		}
 		for {
 			if ebr.PartStatus == 1 { // Solo sirve para llenar el primer EBR
-				fmt.Println("soy logica libre")
+				//fmt.Println("soy logica libre")
 
 				ebr.PartStatus = 0
 				ebr.PartFit = ajuste
@@ -1178,21 +1310,22 @@ func InsertarParticionLogica(path, name, size, fit string) {
 				ebr.PartName = nombreAByte16
 
 				file.Seek(sumadorStart, 0)
-				fmt.Println(cyan+"Sumador: "+reset, sumadorStart)
+				//fmt.Println(cyan+"Sumador: "+reset, sumadorStart)
 				//Se escribe el Struct EBR
 				var binarioEBR bytes.Buffer
 				binary.Write(&binarioEBR, binary.BigEndian, &ebr)
 				escribirBytes(file, binarioEBR.Bytes())
+				fmt.Println(green + "[EXITO]" + reset + "Particion Logica " + cyan + name + reset + " agregada con exito")
 				break
 			} else if siguienteEBRVacio == true { //
-				fmt.Println("Soy logica nueva")
+				//fmt.Println("Soy logica nueva")
 
 				file.Seek(sumadorStart, 0)
-				fmt.Println(cyan+"Sumador: "+reset, sumadorStart)
+				//fmt.Println(cyan+"Sumador: "+reset, sumadorStart)
 
 				var ebrTemporal EBR
 				ebrTemporal.PartStatus = 0
-				fmt.Println(cyan+"Ajuste: "+reset, ajuste)
+				//fmt.Println(cyan+"Ajuste: "+reset, ajuste)
 				ebrTemporal.PartFit = ajuste
 				ebrTemporal.PartStart = sumadorStart
 				sizeConvertido, _ := strconv.ParseInt(size, 10, 64)
@@ -1205,16 +1338,17 @@ func InsertarParticionLogica(path, name, size, fit string) {
 				escribirBytes(file, binarioEBR2.Bytes())
 
 				file.Seek(ebrAnterior.PartStart, 0)
-				fmt.Println(cyan+"posicion anterior particion logica: "+reset, ebrAnterior.PartStart)
+				//fmt.Println(cyan+"posicion anterior particion logica: "+reset, ebrAnterior.PartStart)
 				ebrAnterior.PartNext = sumadorStart
 				var binarioEBRAnterior bytes.Buffer
 				binary.Write(&binarioEBRAnterior, binary.BigEndian, &ebrAnterior)
 				escribirBytes(file, binarioEBRAnterior.Bytes())
+				fmt.Println(green + "[EXITO]" + reset + "Particion Logica " + cyan + name + reset + " agregada con exito")
 				break
 			} else { //Recorre los ebr para encontra uno nuevo
 				ebrAnterior = leerEBR(path, sumadorStart)
-
-				sumadorStart += tamEBR + ebr.PartSize
+				//fmt.Println("Tamano anterior: ", ebrAnterior.PartSize)
+				sumadorStart += tamEBR + ebrAnterior.PartSize
 				contadorLogica++
 
 				if ebrAnterior.PartNext == -1 {
@@ -1222,10 +1356,10 @@ func InsertarParticionLogica(path, name, size, fit string) {
 				} else {
 					//numPartNext := ebrAnterior.PartNext
 					//ebrTransitorio = leerEBR(path, numPartNext)
-					fmt.Println(cyan+"Sumador: "+reset, sumadorStart)
+					//fmt.Println(cyan+"Sumador: "+reset, sumadorStart)
 					file.Seek(sumadorStart, 0)
 				}
-				fmt.Println("soy logica ocupada")
+				//EliminarParticionfmt.Println("soy logica ocupada")
 			}
 		}
 	}
@@ -1250,13 +1384,13 @@ func cuantoEspacioDisponibleHayParaLogica(path, name string, size int64) int64 {
 //MontarParticion = metodo encargada de montar las particiones mediante el comando MOUNT
 func MontarParticion(path, name string) {
 	if _, err := os.Stat(path); os.IsNotExist(err) {
-		fmt.Println(red + "[ERROR]" + reset + "El disco a montar en la ruta especificada no existe")
+		fmt.Println(red + "[ERROR]" + reset + "El disco [" + cyan + path + reset + "] a montar en la ruta especificada no existe")
 	} else {
 		if existeNombreParticion(path, name) == false {
-			fmt.Println(red + "[ERROR]" + reset + "El nombre de la particion a montar no existe")
+			fmt.Println(red + "[ERROR]" + reset + "La particion [" + cyan + name + reset + "] a montar no existe")
 		} else {
 			//************************************************************
-			//Si el arreglo esta vacio agrega el primer valor a esta mamada
+			//Si el arreglo esta vacio agrega el primer valor
 			//************************************************************
 			if len(ContenedorMount) == 0 {
 				nombreID := "vd"
@@ -1269,6 +1403,7 @@ func MontarParticion(path, name string) {
 				nmontaje.Numero = 1
 
 				ContenedorMount = append(ContenedorMount, nmontaje)
+				fmt.Println(green + "[EXITO]" + reset + "La particion " + cyan + name + reset + " fue montado con exito")
 			} else {
 				nombreID := "vd"
 				//************************************************************
@@ -1295,6 +1430,7 @@ func MontarParticion(path, name string) {
 						if yaEstaLaParticionMontada == true {
 							yaEncontre = true
 							fmt.Println(red + "[ERROR]" + reset + "La particion indicada ya se encuentra montada con el ID: " + cyan + retornarID + reset)
+							break
 						} else {
 							//************************************************************
 							//Entra aca cuando ya existe el path montado, verifica el No.
@@ -1337,6 +1473,7 @@ func MontarParticion(path, name string) {
 					nmontaje.Numero = contadorLetrasDiferentes
 
 					ContenedorMount = append(ContenedorMount, nmontaje)
+					fmt.Println(green + "[EXITO]" + reset + "La particion " + cyan + name + reset + " fue montado con exito")
 				}
 			}
 		}
@@ -1639,6 +1776,13 @@ func FormateLWH(id, tipoFormateo string) {
 		avd.AvdProper[1] = 'o'
 		avd.AvdProper[2] = 'o'
 		avd.AvdProper[3] = 't'
+		avd.AvdGid[0] = 'r'
+		avd.AvdGid[1] = 'o'
+		avd.AvdGid[2] = 'o'
+		avd.AvdGid[3] = 't'
+		avd.AvdPerm[0] = '7'
+		avd.AvdPerm[1] = '7'
+		avd.AvdPerm[2] = '7'
 		//Se posiciona en el inicio del Arbol Directorio, ya que como es la carpeta raiz, va en la primer posicion
 		file.Seek(sb.SbApArbolDirectorio, 0)
 		var valorBinarioArbolDirectorio bytes.Buffer
@@ -1687,6 +1831,13 @@ func FormateLWH(id, tipoFormateo string) {
 		inodo.IArrayBloques[2] = 0
 		inodo.IArrayBloques[3] = 0
 		inodo.IApIndirecto = 0
+		inodo.IGid[0] = 'r'
+		inodo.IGid[1] = 'o'
+		inodo.IGid[2] = 'o'
+		inodo.IGid[3] = 't'
+		inodo.IPerm[0] = '7'
+		inodo.IPerm[1] = '7'
+		inodo.IPerm[2] = '7'
 		inodo.IIdProper[0] = 'r'
 		inodo.IIdProper[1] = 'o'
 		inodo.IIdProper[2] = 'o'
@@ -1794,6 +1945,7 @@ func Login(usr, pwd, id string) {
 				if cadenaDivididaComas[0] == "1" && cadenaDivididaComas[1] == "U" {
 					if cadenaDivididaComas[3] == usr && cadenaDivididaComas[4] == pwd {
 						SesionActiva.usuario = usr
+						SesionActiva.grupo = cadenaDivididaComas[2]
 						fmt.Println(green + "[EXITO]" + reset + "Sesion iniciada con exito!")
 					} else if cadenaDivididaComas[3] == usr && cadenaDivididaComas[4] != pwd {
 						fmt.Println(red + "[ERROR]" + reset + "Contraseña incorrecta")
@@ -1820,6 +1972,7 @@ func FuncionLOGOUT() {
 		fmt.Println(red + "[ERROR]" + reset + "No se encuentra ninguna sesion activa")
 	} else {
 		SesionActiva.usuario = ""
+		SesionActiva.grupo = ""
 		fmt.Println(green + "[EXITO]" + reset + "Sesion cerrada con exito!")
 	}
 }
@@ -2407,7 +2560,6 @@ func CrearDirectorio(id, path string, pActivo bool) {
 							apuntadorDeRecursividad := avdAnterior.AvdApArbolVirtualDirectorio
 							if hayDisponibilidadDeEspacio == false {
 								if apuntadorDeRecursividad == 0 {
-									fmt.Println("Voy ENTRANDOOOOOOOOOOOOOOO")
 									//********************************************************
 									//Se buscan nuevas posiciones en el bitmap para escribir
 									//sin interferir con las posiciones que ya estan
@@ -2463,6 +2615,8 @@ func CrearDirectorio(id, path string, pActivo bool) {
 									avdTemporal.AvdApDetalleDirectorio = 0
 									avdTemporal.AvdApArbolVirtualDirectorio = 0
 									avdTemporal.AvdProper = avdAnterior.AvdProper
+									avdTemporal.AvdGid = avdAnterior.AvdGid
+									avdTemporal.AvdPerm = avdAnterior.AvdPerm
 
 									file.Seek(posicionUltimoDirectorioTemporal, 0)
 									var valorBinarioArbolVirtualTemporal bytes.Buffer
@@ -2507,6 +2661,16 @@ func CrearDirectorio(id, path string, pActivo bool) {
 								avdNuevo.AvdApDetalleDirectorio = todasLasPosicionesAEscribirDirectorio[i]
 								avdNuevo.AvdApArbolVirtualDirectorio = 0
 								copy(avdNuevo.AvdProper[:], SesionActiva.usuario)
+								copy(avdNuevo.AvdGid[:], SesionActiva.grupo)
+								if SesionActiva.usuario == "root" {
+									avdNuevo.AvdPerm[0] = '7'
+									avdNuevo.AvdPerm[1] = '7'
+									avdNuevo.AvdPerm[2] = '7'
+								} else {
+									avdNuevo.AvdPerm[0] = '6'
+									avdNuevo.AvdPerm[1] = '6'
+									avdNuevo.AvdPerm[2] = '4'
+								}
 
 								fmt.Println(red, todasLasPosicionesAEscribirArbol[i]-1, reset)
 								file.Seek(sb.SbApArbolDirectorio+(sb.SbSizeStructArbolDirectorio*(todasLasPosicionesAEscribirArbol[i]-1)), 0)
@@ -2746,6 +2910,15 @@ func CrearDirectorio(id, path string, pActivo bool) {
 									avdTemporal.AvdApDetalleDirectorio = 0
 									avdTemporal.AvdApArbolVirtualDirectorio = 0
 									avdTemporal.AvdProper = avdAnterior.AvdProper
+									if SesionActiva.usuario == "root" {
+										avdTemporal.AvdPerm[0] = '7'
+										avdTemporal.AvdPerm[1] = '7'
+										avdTemporal.AvdPerm[2] = '7'
+									} else {
+										avdTemporal.AvdPerm[0] = '6'
+										avdTemporal.AvdPerm[1] = '6'
+										avdTemporal.AvdPerm[2] = '4'
+									}
 
 									file.Seek(posicionUltimoDirectorioTemporal, 0)
 									var valorBinarioArbolVirtualTemporal bytes.Buffer
@@ -3184,6 +3357,7 @@ func CrearArchivo(id, path string, pActivo bool, size, cont string) {
 				avd := leerAVD(file, sb.SbApArbolDirectorio+(sb.SbSizeStructArbolDirectorio*(RArbol[len(RArbol)-1].puntero)))
 				posicionDetalleDirectorio := avd.AvdApDetalleDirectorio - 1
 				var queTablaInodo int64
+				existeNombreRepetido := false
 				fmt.Println("DETALLE DIRECTORIO: ", avd.AvdApDetalleDirectorio)
 				for {
 					fmt.Println(green+"POSICION: ", posicionDetalleDirectorio, reset)
@@ -3193,9 +3367,16 @@ func CrearArchivo(id, path string, pActivo bool, size, cont string) {
 					//********************************************************
 					ddAnterior := leerDD(file, sb.SbApDetalleDirectorio+(sb.SbSizeStructDetalleDirectorio*(posicionDetalleDirectorio)))
 					hayDisponibilidadDeEspacio := false
-					for k := 0; k < 5; k++ {
-						if ddAnterior.DdArrayFiles[k].DdFileApInodo == 1 {
 
+					for k := 0; k < 5; k++ {
+						if ddAnterior.DdArrayFiles[k].DdFileApInodo != 0 {
+							var comparadorNombre [16]byte
+							copy(comparadorNombre[:], NombreArchivo)
+							if ddAnterior.DdArrayFiles[k].DdFileNombre == comparadorNombre {
+								fmt.Println(fmt.Println(red + "[ERROR]" + reset + "Ya existe un archivo con este nombre en la misma carpeta"))
+								existeNombreRepetido = true
+								break
+							}
 						} else if ddAnterior.DdArrayFiles[k].DdFileApInodo == 0 {
 							fmt.Println("LIBRE: ", k)
 							copy(ddAnterior.DdArrayFiles[k].DdFileNombre[:], NombreArchivo)
@@ -3205,6 +3386,9 @@ func CrearArchivo(id, path string, pActivo bool, size, cont string) {
 							romplerCicloInfinito = true
 							break
 						}
+					}
+					if existeNombreRepetido == true {
+						break
 					}
 					if hayDisponibilidadDeEspacio == false {
 						if ddAnterior.DdApDetalleDirectorio == 0 {
@@ -3277,7 +3461,21 @@ func CrearArchivo(id, path string, pActivo bool, size, cont string) {
 						ti.IArrayBloques[2] = 0
 						ti.IArrayBloques[3] = 0
 						ti.IApIndirecto = 0
+						copy(ti.IGid[:], SesionActiva.grupo)
+						if SesionActiva.usuario == "root" {
+							ti.IPerm[0] = '7'
+							ti.IPerm[1] = '7'
+							ti.IPerm[2] = '7'
+						} else {
+							ti.IPerm[0] = '6'
+							ti.IPerm[1] = '6'
+							ti.IPerm[2] = '4'
+						}
 						copy(ti.IIdProper[:], SesionActiva.usuario)
+						file.Seek(sb.SbApTablaInodo+(sb.SbSizeStructInodo*(int64(posicionLibreEnBitmapTablaInodo))), 0)
+						var valorTablaInodo bytes.Buffer
+						binary.Write(&valorTablaInodo, binary.BigEndian, &ti)
+						escribirBytes(file, valorTablaInodo.Bytes())
 						//********************************************************
 						//Se reescribe el bitmapTablaInodo
 						//********************************************************
@@ -3291,55 +3489,57 @@ func CrearArchivo(id, path string, pActivo bool, size, cont string) {
 					}
 				}
 
-				//********************************************************
-				//Se procede a verificar si el size y cont estan activos,
-				//de ser asi, se procede a ingresar el contenido del
-				//archivo
-				//********************************************************
-				if size != "" {
-					bitmapBloques := retornarBitmap(file, sb.SbApBitmapBloques, sb)
+				if existeNombreRepetido == false {
 					//********************************************************
-					//Se realiza el conteo de cuantos bloques se necesitan y
-					//cuantos hay disponibles
+					//Se procede a verificar si el size y cont estan activos,
+					//de ser asi, se procede a ingresar el contenido del
+					//archivo
 					//********************************************************
-					fmt.Println(queTablaInodo)
-					tamEnBytesArchivo, _ := strconv.ParseInt(size, 10, 64)
-					totalDeBloques := tamEnBytesArchivo / 25.0
-					restoBloques := tamEnBytesArchivo % 25.0
-					if restoBloques != 0 {
-						totalDeBloques++
-					}
-					fmt.Println("Total de Bloques a usar: ", totalDeBloques)
-					var contadorBloquesDisponibles int64 = 0
-					for i := 0; i < len(bitmapBloques); i++ {
-						if bitmapBloques[i] == '0' {
-							contadorBloquesDisponibles++
+					if size != "" {
+						bitmapBloques := retornarBitmap(file, sb.SbApBitmapBloques, sb)
+						//********************************************************
+						//Se realiza el conteo de cuantos bloques se necesitan y
+						//cuantos hay disponibles
+						//********************************************************
+						fmt.Println(queTablaInodo)
+						tamEnBytesArchivo, _ := strconv.ParseInt(size, 10, 64)
+						totalDeBloques := tamEnBytesArchivo / 25.0
+						restoBloques := tamEnBytesArchivo % 25.0
+						if restoBloques != 0 {
+							totalDeBloques++
 						}
-					}
-					fmt.Println("BITMAP BLOQUES: ", bitmapBloques)
-					fmt.Println("Bloques Disponibles: ", contadorBloquesDisponibles)
-					if contadorBloquesDisponibles >= totalDeBloques {
-						numEstructuraTreeComplete = 0 //Solo se reinicia
-						numEstructuraTreeComplete = queTablaInodo - 1
-						CadenaRetornoArchivo = ""
-						if cont != "" {
-							CadenaRetornoArchivo = cont
-						} else {
-							abecedario := [26]string{"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z"}
-							contadorLetra := 0
-							for i := 0; i < int(tamEnBytesArchivo); i++ {
-								if contadorLetra == 26 {
-									contadorLetra = 0
-								}
-								CadenaRetornoArchivo += abecedario[contadorLetra]
-								contadorLetra++
+						fmt.Println("Total de Bloques a usar: ", totalDeBloques)
+						var contadorBloquesDisponibles int64 = 0
+						for i := 0; i < len(bitmapBloques); i++ {
+							if bitmapBloques[i] == '0' {
+								contadorBloquesDisponibles++
 							}
 						}
-						ApuntadoresBloqueUsoArchivo = nil
-						ApuntadoresInodosUsoArchivo = nil
-						modificarArchivo(file, sb, queTablaInodo-1, 3)
-					} else {
-						fmt.Println(red + "[ERROR]" + reset + "No hay suficientes bloques disponibles para agregar los datos")
+						fmt.Println("BITMAP BLOQUES: ", bitmapBloques)
+						fmt.Println("Bloques Disponibles: ", contadorBloquesDisponibles)
+						if contadorBloquesDisponibles >= totalDeBloques {
+							numEstructuraTreeComplete = 0 //Solo se reinicia
+							numEstructuraTreeComplete = queTablaInodo - 1
+							CadenaRetornoArchivo = ""
+							if cont != "" {
+								CadenaRetornoArchivo = cont
+							} else {
+								abecedario := [26]string{"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z"}
+								contadorLetra := 0
+								for i := 0; i < int(tamEnBytesArchivo); i++ {
+									if contadorLetra == 26 {
+										contadorLetra = 0
+									}
+									CadenaRetornoArchivo += abecedario[contadorLetra]
+									contadorLetra++
+								}
+							}
+							ApuntadoresBloqueUsoArchivo = nil
+							ApuntadoresInodosUsoArchivo = nil
+							modificarArchivo(file, sb, queTablaInodo-1, 3)
+						} else {
+							fmt.Println(red + "[ERROR]" + reset + "No hay suficientes bloques disponibles para agregar los datos")
+						}
 					}
 				}
 			}
@@ -3454,8 +3654,15 @@ func modificarArchivo(file *os.File, sb SUPERBOOT, inodoPrincipal int64, tipo in
 	}
 	contadorBloquesLibres := totalDeBloquesNuevos
 
+	var contadorBloquesDisponibles int = 0
+	for i := 0; i < len(bitmapBloques); i++ {
+		if bitmapBloques[i] == '0' {
+			contadorBloquesDisponibles++
+		}
+	}
+
 	existenBloquesSuficientes := false
-	if len(bitmapBloques) < totalDeBloquesNuevos {
+	if contadorBloquesDisponibles < totalDeBloquesNuevos {
 		fmt.Println(red + "[ERROR]" + reset + "No hay suficientes BLOQUES para insertar el archivo")
 	} else {
 		for i := 0; i < len(bitmapBloques); i++ {
@@ -3491,8 +3698,14 @@ func modificarArchivo(file *os.File, sb SUPERBOOT, inodoPrincipal int64, tipo in
 	}
 	contadorInodosLibres := totalDeInodosNuevos
 
+	var contadorInodosDisponibles int = 0
+	for i := 0; i < len(bitmapTablaInodos); i++ {
+		if bitmapTablaInodos[i] == '0' {
+			contadorInodosDisponibles++
+		}
+	}
 	existenInodosSuficientes := false
-	if len(bitmapTablaInodos) < totalDeInodosNuevos {
+	if contadorInodosDisponibles < totalDeInodosNuevos {
 		fmt.Println(red + "[ERROR]" + reset + "No hay suficientes INODOS para insertar el archivo")
 	} else {
 		for i := 0; i < len(bitmapTablaInodos); i++ {
@@ -3523,13 +3736,25 @@ func modificarArchivo(file *os.File, sb SUPERBOOT, inodoPrincipal int64, tipo in
 			nuevoTI.ICountBloquesAsignados = int64(totalDeBloques)
 			for j := 0; j < 4; j++ {
 				if contPosBloque != 0 {
+					fmt.Println(todasLasPosicionesAEscribirBloques[numPosBloque])
 					nuevoTI.IArrayBloques[j] = todasLasPosicionesAEscribirBloques[numPosBloque]
 					numPosBloque++
 					contPosBloque--
 				}
 			}
+			fmt.Println("mamarre")
 			if contPosBloque != 0 {
-				nuevoTI.IApIndirecto = todasLasPosicionesAEscribirInodos[i+1]
+				nuevoTI.IApIndirecto = todasLasPosicionesAEscribirInodos[i] + 1
+			}
+			copy(nuevoTI.IGid[:], SesionActiva.grupo)
+			if SesionActiva.usuario == "root" {
+				nuevoTI.IPerm[0] = '7'
+				nuevoTI.IPerm[1] = '7'
+				nuevoTI.IPerm[2] = '7'
+			} else {
+				nuevoTI.IPerm[0] = '6'
+				nuevoTI.IPerm[1] = '6'
+				nuevoTI.IPerm[2] = '4'
 			}
 			copy(nuevoTI.IIdProper[:], SesionActiva.usuario)
 			file.Seek(sb.SbApTablaInodo+(sb.SbSizeStructInodo*(todasLasPosicionesAEscribirInodos[i]-1)), 0)
@@ -3592,6 +3817,54 @@ func recorrerArbolRecursivoRetornarApuntadoresArchivo(file *os.File, sb SUPERBOO
 				numEstructuraTreeComplete--
 				recorrerArbolRecursivoRetornarApuntadoresArchivo(file, sb, 3)
 			}
+		}
+	}
+}
+
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//CHMOD-----CHMOD-----METODOS-----METODOS-----CHMOD-----CHMOD-----METODOS-----METODOS-----CHMOD-----CHMOD-----METODOS-----METODOS-----CHMOD--
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+
+//MetodoCHMOD =
+func MetodoCHMOD(id, path, ugo string, rActivo bool) {
+	if SesionActiva.usuario == "" {
+		fmt.Println(red + "[ERROR]" + reset + "No se encuentra ninguna sesion activa")
+	} else {
+		pathParticion, nameParticion, Existe := existeID(id)
+		var nombreAByte16 [16]byte
+		var start int64
+
+		if Existe == true {
+			mbr := leerMBR(pathParticion)
+			copy(nombreAByte16[:], nameParticion)
+			if mbr.MbrPartition1.PartName == nombreAByte16 {
+				start = mbr.MbrPartition1.PartStart
+			} else if mbr.MbrPartition2.PartName == nombreAByte16 {
+				start = mbr.MbrPartition2.PartStart
+			} else if mbr.MbrPartition3.PartName == nombreAByte16 {
+				start = mbr.MbrPartition3.PartStart
+			} else if mbr.MbrPartition4.PartName == nombreAByte16 {
+				start = mbr.MbrPartition4.PartStart
+			}
+			//********************************************************
+			//Se abre el Archivo
+			//********************************************************
+			file, err := os.OpenFile(pathParticion, os.O_RDWR, 0755)
+			defer file.Close()
+			if err != nil {
+				fmt.Println(red + "[ERROR]" + reset + "No se ha podido abrir el archivo")
+			}
+			//********************************************************
+			//Se retorna el contenido del SuperBoot
+			//********************************************************
+			sb := leerSB(pathParticion, start)
+			fmt.Println(sb.SbApArbolDirectorio)
 		}
 	}
 }
@@ -3756,7 +4029,7 @@ func ResumenEBR(path, name string) {
 			} else {
 				ebrAnterior = leerEBR(path, sumadorStart)
 
-				sumadorStart += tamEBR + ebr.PartSize
+				sumadorStart += tamEBR + ebrAnterior.PartSize
 
 				if ebrAnterior.PartNext == -1 {
 					fmt.Println("IF 2 EXIT")
@@ -3904,7 +4177,9 @@ func ReporteMBR(id, path string) {
 					cadenaReporteMBR += "<TR>\n<TD>Part_Name</TD><TD>" + nombreP4 + "</TD>\n</TR>\n"
 				}
 
-				cadenaReporteMBR += "</TABLE>\n>];\n}"
+				cadenaReporteMBR += "</TABLE>\n>];"
+				cadenaReporteMBR += ReporteEBR(id, ContenedorMount[i].Path)
+				cadenaReporteMBR += "\n}"
 
 				//******************************************************************
 				//Se escribe la cadena en el archivo .svg que usara Graphviz
@@ -3941,6 +4216,96 @@ func ReporteMBR(id, path string) {
 	}
 }
 
+//ReporteEBR =
+func ReporteEBR(id, path string) string {
+	var cadenaReporteEBR string
+	mbr := leerMBR(path)
+	var ebr EBR
+	siExisteExtendida := false
+
+	if mbr.MbrPartition1.PartType == 'E' {
+		ebr = leerEBR(path, mbr.MbrPartition1.PartStart)
+		siExisteExtendida = true
+	} else if mbr.MbrPartition2.PartType == 'E' {
+		ebr = leerEBR(path, mbr.MbrPartition2.PartStart)
+		siExisteExtendida = true
+	} else if mbr.MbrPartition3.PartType == 'E' {
+		ebr = leerEBR(path, mbr.MbrPartition3.PartStart)
+		siExisteExtendida = true
+	} else if mbr.MbrPartition4.PartType == 'E' {
+		ebr = leerEBR(path, mbr.MbrPartition4.PartStart)
+		siExisteExtendida = true
+	} else {
+		fmt.Println(red + "[ERROR]" + reset + "No existe una particion extendida para generar el resumen de particiones logicas")
+	}
+
+	var tamEBR int64 = int64(binary.Size(ebr))
+	var contadorLogica int64 = 1
+	var sumadorStart int64 = ebr.PartStart
+	var ebrAnterior EBR
+	if siExisteExtendida == true {
+		file, err := os.OpenFile(path, os.O_RDWR, 0755)
+		defer file.Close()
+		if err != nil {
+			fmt.Println(red + "[ERROR]" + reset + "No se ha podido abrir el archivo")
+		}
+		cadenaReporteEBR = "EBR [label=<\n<TABLE BORDER='0' CELLBORDER='1' CELLSPACING='0'>\n<TR>\n<TD BGCOLOR='#fa4251' COLSPAN='2'>REPORTE EBR</TD>\n</TR>\n"
+		for {
+			if contadorLogica == 1 { // Solo sirve para llenar el primer EBR
+				cadenaReporteEBR += "<TR>\n<TD BGCOLOR='#FF8585' COLSPAN='2'>EBR " + strconv.FormatInt(contadorLogica, 10) + "</TD>\n</TR>\n"
+				var mamarreP1 string
+				for i, valor := range ebr.PartName {
+					if ebr.PartName[i] != 0 {
+						mamarreP1 += string(valor)
+					}
+				}
+				cadenaReporteEBR += "<TR>\n<TD>Part_Name</TD><TD>" + mamarreP1 + "</TD>\n</TR>\n"
+				if ebr.PartStatus == 1 {
+					cadenaReporteEBR += "<TR>\n<TD>Part_Status</TD><TD>1</TD>\n</TR>\n"
+				} else {
+					cadenaReporteEBR += "<TR>\n<TD>Part_Status</TD><TD>0</TD>\n</TR>\n"
+				}
+				FitPL := string(ebr.PartFit)
+				cadenaReporteEBR += "<TR>\n<TD>Part_Fit</TD><TD>" + FitPL + "</TD>\n</TR>\n"
+				cadenaReporteEBR += "<TR>\n<TD>Part_Start</TD><TD>" + strconv.FormatInt(ebr.PartStart, 10) + "</TD>\n</TR>\n"
+				cadenaReporteEBR += "<TR>\n<TD>Part_Size</TD><TD>" + strconv.FormatInt(ebr.PartSize, 10) + "</TD>\n</TR>\n"
+				cadenaReporteEBR += "<TR>\n<TD>Part_Next</TD><TD>" + strconv.FormatInt(ebr.PartNext, 10) + "</TD>\n</TR>\n"
+				contadorLogica++
+			} else {
+				ebrAnterior = leerEBR(path, sumadorStart)
+				sumadorStart += tamEBR + ebrAnterior.PartSize
+				if ebrAnterior.PartNext == -1 {
+					break
+				} else {
+					ebrAnterior = leerEBR(path, sumadorStart)
+					cadenaReporteEBR += "<TR>\n<TD BGCOLOR='#FF8585' COLSPAN='2'>EBR " + strconv.FormatInt(contadorLogica, 10) + "</TD>\n</TR>\n"
+					var mamarreP1 string
+					for i, valor := range ebrAnterior.PartName {
+						if ebrAnterior.PartName[i] != 0 {
+							mamarreP1 += string(valor)
+						}
+					}
+					cadenaReporteEBR += "<TR>\n<TD>Part_Name</TD><TD>" + mamarreP1 + "</TD>\n</TR>\n"
+					if ebrAnterior.PartStatus == 1 {
+						cadenaReporteEBR += "<TR>\n<TD>Part_Status</TD><TD>1</TD>\n</TR>\n"
+					} else {
+						cadenaReporteEBR += "<TR>\n<TD>Part_Status</TD><TD>0</TD>\n</TR>\n"
+					}
+					FitPL := string(ebrAnterior.PartFit)
+					cadenaReporteEBR += "<TR>\n<TD>Part_Fit</TD><TD>" + FitPL + "</TD>\n</TR>\n"
+					cadenaReporteEBR += "<TR>\n<TD>Part_Start</TD><TD>" + strconv.FormatInt(ebrAnterior.PartStart, 10) + "</TD>\n</TR>\n"
+					cadenaReporteEBR += "<TR>\n<TD>Part_Size</TD><TD>" + strconv.FormatInt(ebrAnterior.PartSize, 10) + "</TD>\n</TR>\n"
+					cadenaReporteEBR += "<TR>\n<TD>Part_Next</TD><TD>" + strconv.FormatInt(ebrAnterior.PartNext, 10) + "</TD>\n</TR>\n"
+					file.Seek(sumadorStart, 0)
+				}
+				contadorLogica++
+			}
+		}
+		cadenaReporteEBR += "</TABLE>\n>];"
+	}
+	return cadenaReporteEBR
+}
+
 //ReporteDISK = Metodo que genera el reporte mediante la funcion REP del MBR
 func ReporteDISK(id, path string) {
 	PathID, _, ExisteID := existeID(id)
@@ -3954,7 +4319,7 @@ func ReporteDISK(id, path string) {
 		cadenaReporteDISK += "<tr>\n<td rowspan = '2'><font color='#00ad5f'>MBR</font></td>\n"
 
 		if mbr.MbrPartition1.PartStatus == 1 {
-			cadenaReporteDISK += "<td rowspan = '2'><font BGCOLOR = '#fa4251' color='#white'>Libre</font></td>\n"
+			cadenaReporteDISK += "<td rowspan = '2'><font BGCOLOR = '#fa4251' color='white'>Libre</font></td>\n"
 		} else {
 			if mbr.MbrPartition1.PartType == 'P' {
 				cadenaReporteDISK += "<td rowspan = '2'><font color='#00ad5f'>Primaria</font></td>\n"
@@ -3967,9 +4332,18 @@ func ReporteDISK(id, path string) {
 				cadenaReporteDISKAuxiliar += "</tr>\n"
 				cadenaReporteDISKAuxiliar += "</table>\n"
 			}
+			if mbr.MbrPartition2.PartStatus == 0 {
+				var calculoFragmentacion int64
+				calculoFragmentacion = mbr.MbrPartition2.PartStart
+				calculoFragmentacion -= mbr.MbrPartition1.PartStart + mbr.MbrPartition1.PartSize
+				//fmt.Println("ESTE ES EL CALCULO DE FRAGMENTACION: ", calculoFragmentacion)
+				if calculoFragmentacion > 0 {
+					cadenaReporteDISK += "<td rowspan = '2'><font color='#fa4251'>Fragmentacion</font></td>\n"
+				}
+			}
 		}
 		if mbr.MbrPartition2.PartStatus == 1 {
-			cadenaReporteDISK += "<td rowspan = '2'><font BGCOLOR = '#fa4251' color='#white'>Libre</font></td>\n"
+			cadenaReporteDISK += "<td rowspan = '2'><font BGCOLOR = '#fa4251' color='white'>Libre</font></td>\n"
 		} else {
 			if mbr.MbrPartition2.PartType == 'P' {
 				cadenaReporteDISK += "<td rowspan = '2'><font color='#00ad5f'>Primaria</font></td>\n"
@@ -3981,6 +4355,15 @@ func ReporteDISK(id, path string) {
 				cadenaReporteDISKAuxiliar += recorerParticionesLogicasReporte(PathID, mbr, 2)
 				cadenaReporteDISKAuxiliar += "</tr>\n"
 				cadenaReporteDISKAuxiliar += "</table>\n"
+			}
+			if mbr.MbrPartition3.PartStatus == 0 {
+				var calculoFragmentacion int64
+				calculoFragmentacion = mbr.MbrPartition3.PartStart
+				calculoFragmentacion -= mbr.MbrPartition2.PartStart + mbr.MbrPartition2.PartSize
+				//fmt.Println("ESTE ES EL CALCULO DE FRAGMENTACION: ", calculoFragmentacion)
+				if calculoFragmentacion > 0 {
+					cadenaReporteDISK += "<td rowspan = '2'><font color='#fa4251'>Fragmentacion</font></td>\n"
+				}
 			}
 		}
 		if mbr.MbrPartition3.PartStatus == 1 {
@@ -3997,6 +4380,15 @@ func ReporteDISK(id, path string) {
 				cadenaReporteDISKAuxiliar += "</tr>\n"
 				cadenaReporteDISKAuxiliar += "</table>\n"
 			}
+			if mbr.MbrPartition4.PartStatus == 0 {
+				var calculoFragmentacion int64
+				calculoFragmentacion = mbr.MbrPartition4.PartStart
+				calculoFragmentacion -= (mbr.MbrPartition3.PartStart + mbr.MbrPartition3.PartSize)
+				//fmt.Println("ESTE ES EL CALCULO DE FRAGMENTACION: ", calculoFragmentacion)
+				if calculoFragmentacion > 0 {
+					cadenaReporteDISK += "<td rowspan = '2'><font color='#fa4251'>Fragmentacion</font></td>\n"
+				}
+			}
 		}
 		if mbr.MbrPartition4.PartStatus == 1 {
 			cadenaReporteDISK += "<td rowspan = '2'><font BGCOLOR = '#fa4251' color='white'>Libre</font></td>\n"
@@ -4011,6 +4403,13 @@ func ReporteDISK(id, path string) {
 				cadenaReporteDISKAuxiliar += recorerParticionesLogicasReporte(PathID, mbr, 4)
 				cadenaReporteDISKAuxiliar += "</tr>\n"
 				cadenaReporteDISKAuxiliar += "</table>\n"
+			}
+			var calculoFragmentacion int64
+			calculoFragmentacion = mbr.MbrTamano
+			calculoFragmentacion -= (mbr.MbrPartition4.PartStart + mbr.MbrPartition4.PartSize)
+			//fmt.Println("ESTE ES EL CALCULO DE FRAGMENTACION: ", calculoFragmentacion)
+			if calculoFragmentacion > 0 {
+				cadenaReporteDISK += "<td rowspan = '2'><font color='#fa4251'>Fragmentacion</font></td>\n"
 			}
 		}
 		cadenaReporteDISK += "</tr>\n"
@@ -4045,7 +4444,7 @@ func ReporteDISK(id, path string) {
 		}
 		fmt.Print(string(cmdOutput.Bytes()))
 	} else {
-
+		fmt.Println(red + "[ERROR]" + reset + "El id " + cyan + id + reset + " no se encuentra montado")
 	}
 }
 
@@ -4084,7 +4483,7 @@ func recorerParticionesLogicasReporte(path string, mbr MBR, queParticionExtendid
 				contadorLogica++
 			} else {
 				ebrAnterior = leerEBR(path, sumadorStart)
-				sumadorStart += tamEBR + ebr.PartSize
+				sumadorStart += tamEBR + ebrAnterior.PartSize
 				if ebrAnterior.PartNext == -1 {
 					break
 				} else {
@@ -4306,11 +4705,6 @@ func ReporteTreeComplete(id, path string) {
 		//**********************************************************************
 		//Se preparan los tamaños de los archivos
 		//**********************************************************************
-		//tamSuperBoot := int64(binary.Size(SUPERBOOT{}))
-		//tamArbolVirtualDirectorio := sb.SbSizeStructArbolDirectorio
-		//tamDetalleDirectorio := sb.SbSizeStructDetalleDirectorio
-		//tamTablaInodo := sb.SbSizeStructInodo
-		//tamBloqueDatos := sb.SbSizeStructBloque
 		var cadenaReporteTreeComplete string
 		if bitmapArbolVirtualDirectorio[0] == '1' {
 			cadenaReporteTreeComplete = "digraph MBR {\nnode [shape=plaintext]\nrankdir=LR;\n"
@@ -4351,6 +4745,90 @@ func ReporteTreeComplete(id, path string) {
 			//Se escribe la cadena en el archivo .svg que usara Graphviz
 			//******************************************************************
 			nombreGV, nombreExtension := crearArchivoParaReporte(path, cadenaReporteTreeComplete)
+			//******************************************************************
+			//Aca se genera el la imagen, pdf segun sea ingresada
+			//******************************************************************
+			//cmd := exec.Command("dot", "-Tps", "/home/javier/Imágenes/graph1.gv", "-o", "/home/javier/Imágenes/gra.pdf")
+			ruta, nombreArchivo := filepath.Split(path)
+			nombreCompleto := ruta + nombreArchivo
+
+			var cmd *exec.Cmd
+			if nombreExtension == ".pdf" {
+				cmd = exec.Command("dot", "-Tps", ruta+nombreGV, "-o", nombreCompleto)
+			} else {
+				cmd = exec.Command("dot", "-Tpng", ruta+nombreGV, "-o", nombreCompleto)
+			}
+			cmdOutput := &bytes.Buffer{}
+			cmd.Stdout = cmdOutput
+			err := cmd.Run()
+			if err != nil {
+				os.Stderr.WriteString(err.Error())
+			}
+			fmt.Print(string(cmdOutput.Bytes()))
+		}
+	}
+	//leerBitmapResumen(path, )
+}
+
+//ReporteDirectorio =
+func ReporteDirectorio(id, path string) {
+	PathID, NombreParticion, ExisteID := existeID(id) //Path, nombre particion, bool si existe
+	//var cadenaReporteTreeComplete string = ""
+	var start int64
+
+	if ExisteID == true {
+		mbr := leerMBR(PathID)
+		var nombreAByte16 [16]byte
+		copy(nombreAByte16[:], NombreParticion)
+		if mbr.MbrPartition1.PartName == nombreAByte16 {
+			start = mbr.MbrPartition1.PartStart
+		} else if mbr.MbrPartition2.PartName == nombreAByte16 {
+			start = mbr.MbrPartition1.PartStart
+		} else if mbr.MbrPartition3.PartName == nombreAByte16 {
+			start = mbr.MbrPartition1.PartStart
+		} else if mbr.MbrPartition4.PartName == nombreAByte16 {
+			start = mbr.MbrPartition1.PartStart
+		}
+		sb := leerSB(PathID, start)
+
+		//Se abre el archivo para su uso
+		file, err := os.OpenFile(PathID, os.O_RDWR, 0755)
+		defer file.Close()
+		if err != nil {
+			fmt.Println(red + "[ERROR]" + reset + "No se ha podido abrir el archivo")
+		}
+
+		//**********************************************************************
+		//Se preparan los bitmap para saber como moverse en el archivo
+		//**********************************************************************
+		bitmapArbolVirtualDirectorio := retornarBitmap(file, sb.SbApBitmapArbolDirectorio, sb)
+		//fmt.Println(bitmapArbolVirtualDirectorio)
+
+		//**********************************************************************
+		//Se preparan los tamaños de los archivos
+		//**********************************************************************
+		var cadenaReporteDirectorio string
+		if bitmapArbolVirtualDirectorio[0] == '1' {
+			cadenaReporteDirectorio = "digraph MBR {\nnode [shape=plaintext]\nrankdir=LR;\n"
+			//aDondeVoy := sb.SbApArbolDirectorio
+			subCadenaReporteTreeComplete = ""
+			numEstructuraTreeComplete = 0
+			numEstructuraTreeCompleteMov = 0
+			numEstructuraTreeCompleteAux = 0
+			//recorrerArbolRecursivoReporte(file, sb, 1)
+			for i := 0; i < len(bitmapArbolVirtualDirectorio); i++ {
+				if bitmapArbolVirtualDirectorio[i] == '1' {
+					recorrerDirectoriosReportePorBitmap(file, sb, int64(i), 1)
+				}
+			}
+			//recorrerArbolRecursivoReporte(file, sb, 0, 1)
+			cadenaReporteDirectorio += subCadenaReporteTreeComplete
+			cadenaReporteDirectorio += "}"
+			//fmt.Println(red + "------------" + reset)
+			//******************************************************************
+			//Se escribe la cadena en el archivo .svg que usara Graphviz
+			//******************************************************************
+			nombreGV, nombreExtension := crearArchivoParaReporte(path, cadenaReporteDirectorio)
 			//******************************************************************
 			//Aca se genera el la imagen, pdf segun sea ingresada
 			//******************************************************************
@@ -4843,6 +5321,13 @@ func modificarUSERTXT(file *os.File, sb SUPERBOOT, name, usr, pwd string, tamCad
 		if contPosBloque != 0 {
 			nuevoTI.IApIndirecto = todasLasPosicionesAEscribirInodos[i+1]
 		}
+		nuevoTI.IGid[0] = 'r'
+		nuevoTI.IGid[1] = 'o'
+		nuevoTI.IGid[2] = 'o'
+		nuevoTI.IGid[3] = 't'
+		nuevoTI.IPerm[0] = '7'
+		nuevoTI.IPerm[1] = '7'
+		nuevoTI.IPerm[2] = '7'
 		nuevoTI.IIdProper[0] = 'r'
 		nuevoTI.IIdProper[1] = 'o'
 		nuevoTI.IIdProper[2] = 'o'
@@ -4938,6 +5423,14 @@ func recorrerArbolRecursivoReportePorBitmap(file *os.File, sb SUPERBOOT, posicio
 		subCadenaReporteTreeComplete += "<TR>\n<TD BGCOLOR='#99ccff'>APD 6</TD><TD port='6'>" + strconv.FormatInt(avd.AvdApArraySubdirectorios[5], 10) + "</TD>\n</TR>\n"
 		subCadenaReporteTreeComplete += "<TR>\n<TD BGCOLOR='#99ccff'>Detalle Directorio</TD><TD port='7'>" + strconv.FormatInt(avd.AvdApDetalleDirectorio, 10) + "</TD>\n</TR>\n"
 		subCadenaReporteTreeComplete += "<TR>\n<TD BGCOLOR='#99ccff'>APDI 1</TD><TD port='8'>" + strconv.FormatInt(avd.AvdApArbolVirtualDirectorio, 10) + "</TD>\n</TR>\n"
+		var nombreGroup string
+		for i, valor := range avd.AvdGid {
+			if avd.AvdGid[i] != 0 {
+				nombreGroup += string(valor)
+			}
+		}
+		subCadenaReporteTreeComplete += "<TR>\n<TD BGCOLOR='#99ccff'>GRP</TD><TD>" + nombreGroup + "</TD>\n</TR>\n"
+		subCadenaReporteTreeComplete += "<TR>\n<TD BGCOLOR='#99ccff'>PERM</TD><TD>" + string(avd.AvdPerm[:]) + "</TD>\n</TR>\n"
 		var nombreProper string
 		for i1, valor1 := range avd.AvdProper {
 			if avd.AvdProper[i1] != 0 {
@@ -5004,6 +5497,14 @@ func recorrerArbolRecursivoReportePorBitmap(file *os.File, sb SUPERBOOT, posicio
 		subCadenaReporteTreeComplete += "<TR>\n<TD BGCOLOR='#ffc374'>APD 3</TD><TD port='3'>" + strconv.FormatInt(ti.IArrayBloques[2], 10) + "</TD>\n</TR>\n"
 		subCadenaReporteTreeComplete += "<TR>\n<TD BGCOLOR='#ffc374'>APD 4</TD><TD port='4'>" + strconv.FormatInt(ti.IArrayBloques[3], 10) + "</TD>\n</TR>\n"
 		subCadenaReporteTreeComplete += "<TR>\n<TD BGCOLOR='#ffc374'>API</TD><TD port='5'>" + strconv.FormatInt(ti.IApIndirecto, 10) + "</TD>\n</TR>\n"
+		var nombreGroup string
+		for i, valor := range ti.IGid {
+			if ti.IGid[i] != 0 {
+				nombreGroup += string(valor)
+			}
+		}
+		subCadenaReporteTreeComplete += "<TR>\n<TD BGCOLOR='#ffc374'>GRP</TD><TD>" + nombreGroup + "</TD>\n</TR>\n"
+		subCadenaReporteTreeComplete += "<TR>\n<TD BGCOLOR='#ffc374'>PERM</TD><TD>" + string(ti.IPerm[:]) + "</TD>\n</TR>\n"
 		var nombreProper string
 		for i1, valor1 := range ti.IIdProper {
 			if ti.IIdProper[i1] != 0 {
@@ -5033,5 +5534,55 @@ func recorrerArbolRecursivoReportePorBitmap(file *os.File, sb SUPERBOOT, posicio
 		}
 		subCadenaReporteTreeComplete += "<TR>\n<TD COLSPAN='2'>" + contenidoBloque + "</TD>\n</TR>\n"
 		subCadenaReporteTreeComplete += "</TABLE>\n>];\n\n"
+	}
+}
+
+func recorrerDirectoriosReportePorBitmap(file *os.File, sb SUPERBOOT, posicion int64, tipoArchivo int) {
+	if tipoArchivo == 1 {
+		avd := leerAVD(file, sb.SbApArbolDirectorio+(sb.SbSizeStructArbolDirectorio*posicion))
+		subCadenaReporteTreeComplete += "AVD" + strconv.FormatInt(posicion+1, 10) + "[label=<\n<TABLE BORDER='0' CELLBORDER='1' CELLSPACING='0'>\n"
+		var nombreDirectorio string
+		for i1, valor1 := range avd.AvdNombreDirectorio {
+			if avd.AvdNombreDirectorio[i1] != 0 {
+				nombreDirectorio += string(valor1)
+			}
+		}
+		subCadenaReporteTreeComplete += "<TR port='0'>\n<TD BGCOLOR='#99ccff' COLSPAN='2'><font color='black'>" + nombreDirectorio + "</font></TD>\n</TR>\n"
+		subCadenaReporteTreeComplete += "<TR>\n<TD BGCOLOR='#99ccff'>Fecha Creacion</TD><TD>" + string(avd.AvdFechaCreacion[:]) + "</TD>\n</TR>\n"
+		subCadenaReporteTreeComplete += "<TR>\n<TD BGCOLOR='#99ccff'>APD 1</TD><TD port='1'>" + strconv.FormatInt(avd.AvdApArraySubdirectorios[0], 10) + "</TD>\n</TR>\n"
+		subCadenaReporteTreeComplete += "<TR>\n<TD BGCOLOR='#99ccff'>APD 2</TD><TD port='2'>" + strconv.FormatInt(avd.AvdApArraySubdirectorios[1], 10) + "</TD>\n</TR>\n"
+		subCadenaReporteTreeComplete += "<TR>\n<TD BGCOLOR='#99ccff'>APD 3</TD><TD port='3'>" + strconv.FormatInt(avd.AvdApArraySubdirectorios[2], 10) + "</TD>\n</TR>\n"
+		subCadenaReporteTreeComplete += "<TR>\n<TD BGCOLOR='#99ccff'>APD 4</TD><TD port='4'>" + strconv.FormatInt(avd.AvdApArraySubdirectorios[3], 10) + "</TD>\n</TR>\n"
+		subCadenaReporteTreeComplete += "<TR>\n<TD BGCOLOR='#99ccff'>APD 5</TD><TD port='5'>" + strconv.FormatInt(avd.AvdApArraySubdirectorios[4], 10) + "</TD>\n</TR>\n"
+		subCadenaReporteTreeComplete += "<TR>\n<TD BGCOLOR='#99ccff'>APD 6</TD><TD port='6'>" + strconv.FormatInt(avd.AvdApArraySubdirectorios[5], 10) + "</TD>\n</TR>\n"
+		subCadenaReporteTreeComplete += "<TR>\n<TD BGCOLOR='#99ccff'>Detalle Directorio</TD><TD port='7'>" + strconv.FormatInt(avd.AvdApDetalleDirectorio, 10) + "</TD>\n</TR>\n"
+		subCadenaReporteTreeComplete += "<TR>\n<TD BGCOLOR='#99ccff'>APDI 1</TD><TD port='8'>" + strconv.FormatInt(avd.AvdApArbolVirtualDirectorio, 10) + "</TD>\n</TR>\n"
+		var nombreGroup string
+		for i, valor := range avd.AvdGid {
+			if avd.AvdGid[i] != 0 {
+				nombreGroup += string(valor)
+			}
+		}
+		subCadenaReporteTreeComplete += "<TR>\n<TD BGCOLOR='#99ccff'>GRP</TD><TD>" + nombreGroup + "</TD>\n</TR>\n"
+		subCadenaReporteTreeComplete += "<TR>\n<TD BGCOLOR='#99ccff'>PERM</TD><TD>" + string(avd.AvdPerm[:]) + "</TD>\n</TR>\n"
+		var nombreProper string
+		for i1, valor1 := range avd.AvdProper {
+			if avd.AvdProper[i1] != 0 {
+				nombreProper += string(valor1)
+			}
+		}
+		subCadenaReporteTreeComplete += "<TR>\n<TD BGCOLOR='#99ccff'>PROPER</TD><TD>" + nombreProper + "</TD>\n</TR>\n"
+		subCadenaReporteTreeComplete += "</TABLE>\n>];\n\n"
+		for i := 0; i < 8; i++ {
+			if i < 6 && avd.AvdApArraySubdirectorios[i] != 0 {
+				subCadenaReporteTreeComplete += "AVD" + strconv.FormatInt(posicion+1, 10) + ":" + strconv.Itoa(i+1) + " -> "
+				subCadenaReporteTreeComplete += "AVD" + strconv.FormatInt(avd.AvdApArraySubdirectorios[i], 10) + "\n"
+			} else if i == 7 && avd.AvdApArbolVirtualDirectorio != 0 {
+				fmt.Println("[TIPO1]pos ind", i, ":", avd.AvdApArbolVirtualDirectorio)
+				subCadenaReporteTreeComplete += "AVD" + strconv.FormatInt(posicion+1, 10) + ":" + strconv.Itoa(i+1) + " -> "
+				numEstructuraTreeComplete = avd.AvdApArbolVirtualDirectorio
+				subCadenaReporteTreeComplete += "AVD" + strconv.FormatInt(avd.AvdApArbolVirtualDirectorio, 10) + "\n"
+			}
+		}
 	}
 }
