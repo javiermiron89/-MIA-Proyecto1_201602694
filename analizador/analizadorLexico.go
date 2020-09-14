@@ -82,7 +82,7 @@ func IniciarAnalisis(cadena string) []string {
 			contadorComillas := strings.Count(cadenaDividida[i], "\"")
 			if contadorComillas == 2 {
 				cadenaDividida[i] = strings.ReplaceAll(cadenaDividida[i], "\"", "")
-				temporal += cadenaDividida[i]
+				temporal = cadenaDividida[i]
 				cadenaReordenadaDividida = append(cadenaReordenadaDividida, temporal)
 			} else if strings.Contains(cadenaDividida[i], "\"") && encontreComilla == true {
 				encontreComilla = false
@@ -249,6 +249,14 @@ func VerificarTipo(cadenaOrdenada []string) {
 			SaltoLinea()
 			fmt.Println(yellow + "Palabra reservada a ejecutar: " + magenta + "MKFILE" + reset)
 			funciones.FuncionMKFILE(cadenaOrdenada)
+		} else if strings.ToLower(mamarre) == "edit" {
+			SaltoLinea()
+			fmt.Println(yellow + "Palabra reservada a ejecutar: " + magenta + "EDIT" + reset)
+			funciones.FuncionEDIT(cadenaOrdenada)
+		} else if strings.ToLower(mamarre) == "cat" {
+			SaltoLinea()
+			fmt.Println(yellow + "Palabra reservada a ejecutar: " + magenta + "CAT" + reset)
+			funciones.FuncionCAT(cadenaOrdenada)
 		} else if strings.ToLower(mamarre) == "mkdir" {
 			SaltoLinea()
 			fmt.Println(yellow + "Palabra reservada a ejecutar: " + magenta + "MKDIR" + reset)

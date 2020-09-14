@@ -628,7 +628,7 @@ func FuncionMKFILE(vector []string) {
 
 	for j := 1; j < len(vector); j++ {
 		vecAuxiliar = strings.SplitN(vector[j], "->", -1)
-		fmt.Println(vecAuxiliar)
+		//fmt.Println(vecAuxiliar)
 		if strings.ToLower(vecAuxiliar[0]) == "-id" {
 			parametros[0] = vecAuxiliar[1]
 			idObligatorio = true
@@ -666,6 +666,99 @@ func FuncionMKFILE(vector []string) {
 		}
 	} else {
 		fmt.Println(red + "[ERROR]" + reset + "Los parametros de " + magenta + "MKDIR" + reset + " obligatorios no han sido completamente ingresados")
+	}
+}
+
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//EDIT-----EDIT-----FUNCIONES-----FUNCIONES-----EDIT-----EDIT-----FUNCIONES-----FUNCIONES-----EDIT-----EDIT-----FUNCIONES-----FUNCIONES------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+
+//FuncionEDIT =
+func FuncionEDIT(vector []string) {
+	var parametros [4]string //[0]id   [1]path	[2]size	[3]cont
+	var vecAuxiliar []string = nil
+	idObligatorio := false
+	pathObligatorio := false
+	sizeOpcional := false
+	contOpcional := false
+
+	for j := 1; j < len(vector); j++ {
+		vecAuxiliar = strings.SplitN(vector[j], "->", -1)
+		fmt.Println(vecAuxiliar)
+		if strings.ToLower(vecAuxiliar[0]) == "-id" {
+			parametros[0] = vecAuxiliar[1]
+			idObligatorio = true
+		} else if strings.ToLower(vecAuxiliar[0]) == "-path" {
+			parametros[1] = vecAuxiliar[1]
+			pathObligatorio = true
+		} else if strings.ToLower(vecAuxiliar[0]) == "-size" {
+			parametros[2] = vecAuxiliar[1]
+			sizeOpcional = true
+		} else if strings.ToLower(vecAuxiliar[0]) == "-cont" {
+			parametros[3] = vecAuxiliar[1]
+			contOpcional = true
+		}
+	}
+
+	if idObligatorio == true && pathObligatorio == true {
+		if sizeOpcional == false && contOpcional == false {
+			fmt.Println(red + "[ERROR]" + reset + "Se debe ingresar al menos uno de estos parametros (size <-> cont)")
+		} else {
+			metodos.ModificarArchivo(parametros[0], parametros[1], parametros[2], parametros[3])
+		}
+	} else {
+		fmt.Println(red + "[ERROR]" + reset + "Los parametros de " + magenta + "EDIT" + reset + " obligatorios no han sido completamente ingresados")
+	}
+}
+
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//CAT-----CAT-----FUNCIONES-----FUNCIONES-----CAT-----CAT-----FUNCIONES-----FUNCIONES-----CAT-----CAT-----FUNCIONES-----FUNCIONES-----CAT----
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+
+//FuncionCAT =
+func FuncionCAT(vector []string) {
+	var parametros [2]string //[0]PATH   [1]NAME
+	var listadoArchivos []string
+	var vecAuxiliar []string = nil
+	idObligatorio := false
+	fileObligatorio := false
+
+	contador := 0
+	for j := 1; j < len(vector); j++ {
+		vecAuxiliar = strings.SplitN(vector[j], "->", -1)
+		if strings.ToLower(vecAuxiliar[0]) == "-id" {
+			parametros[0] = vecAuxiliar[1]
+			idObligatorio = true
+		} else {
+			vecAuxiliar[0] = vecAuxiliar[0][:len(vecAuxiliar[0])-1]
+			if strings.ToLower(vecAuxiliar[0]) == "-file" {
+				parametros[1] = vecAuxiliar[1]
+				listadoArchivos = append(listadoArchivos, parametros[1])
+				fileObligatorio = true
+				contador++
+			}
+		}
+	}
+
+	if idObligatorio == true && fileObligatorio == true {
+		for i := 0; i < len(listadoArchivos); i++ {
+			fmt.Println(magenta+"Contenido del archivo:"+cyan, listadoArchivos[i], reset)
+			metodos.ImprimirContenidoArchivo(parametros[0], listadoArchivos[i])
+		}
+	} else {
+		fmt.Println(red + "[ERROR]" + reset + "Los parametros de " + magenta + "CAT" + reset + " obligatorios no han sido completamente ingresados")
 	}
 }
 
@@ -752,7 +845,7 @@ func FuncionCHMOD(vector []string) {
 		if rOpcional == true {
 			metodos.MetodoCHMOD(parametros[0], parametros[1], parametros[2], true)
 		} else {
-
+			metodos.MetodoCHMOD(parametros[0], parametros[1], parametros[2], false)
 		}
 	}
 }
@@ -809,6 +902,9 @@ func FuncionREP(vector []string) {
 			} else if strings.ToLower(vecAuxiliar[1]) == "tree_file" {
 				parametros[0] = "TREE_FILE"
 				nombreObligatorio = true
+			} else if strings.ToLower(vecAuxiliar[1]) == "tree_directorio" {
+				parametros[0] = "TREE_DIRECTORIO"
+				nombreObligatorio = true
 			} else if strings.ToLower(vecAuxiliar[1]) == "tree_complete" {
 				parametros[0] = "TREE_COMPLETE"
 				nombreObligatorio = true
@@ -824,7 +920,7 @@ func FuncionREP(vector []string) {
 		} else if strings.ToLower(vecAuxiliar[0]) == "-id" {
 			parametros[2] = vecAuxiliar[1]
 			idObligatorio = true
-		} else if strings.ToLower(vecAuxiliar[0]) == "-RUTA" {
+		} else if strings.ToLower(vecAuxiliar[0]) == "-ruta" {
 			parametros[3] = vecAuxiliar[1]
 			rutaOpcional = true
 		}
@@ -833,9 +929,6 @@ func FuncionREP(vector []string) {
 
 	//[0]NOMBRE   [1]PATH	[2]ID	[3]RUTA
 	if nombreObligatorio == true && pathObligatorio == true && idObligatorio == true {
-		if rutaOpcional == false {
-
-		}
 		if parametros[0] == "MBR" {
 			metodos.ReporteMBR(parametros[2], parametros[1])
 		} else if parametros[0] == "DISK" {
@@ -852,8 +945,18 @@ func FuncionREP(vector []string) {
 			metodos.ReporteBitmap(parametros[2], parametros[1], 4)
 		} else if parametros[0] == "DIRECTORIO" {
 			metodos.ReporteDirectorio(parametros[2], parametros[1])
+		} else if parametros[0] == "TREE_FILE" {
+			if rutaOpcional == true {
+				metodos.ReporteTreeFile(parametros[2], parametros[1], parametros[3])
+			} else {
+				fmt.Println(red + "[ERROR]" + reset + "El parametro " + magenta + "ruta" + reset + " no fue ingresado para poder realizar el reporte Tree_File")
+			}
 		} else if parametros[0] == "TREE_COMPLETE" {
 			metodos.ReporteTreeComplete(parametros[2], parametros[1])
+		} else if parametros[0] == "TREE_DIRECTORIO" {
+			metodos.ReporteTreeDirectorio(parametros[2], parametros[1])
+		} else if parametros[0] == "LS" {
+			//metodos.ReporteLS(parametros[2], parametros[1])
 		}
 	} else {
 		fmt.Println(red + "[ERROR]" + reset + "Los parametros de " + magenta + "REP" + reset + " obligatorios no han sido completamente ingresados")

@@ -108,7 +108,7 @@ func numeroDeEstructuras(tamanoDeParticion, tamanoDelSuperBloque, tamanoArbolVit
 	var numerador float64 = (float64(tamanoDeParticion) - (2 * float64(tamanoDelSuperBloque)))
 	var denominador float64 = (27 + float64(tamanoArbolVitual) + float64(tamanoDetalleDirectorio) + (5*float64(tamanoInodo) + (20 * float64(tamanoBloque)) + float64(bitacora)))
 	numEstructuras = numerador / denominador
-	fmt.Println(green+"Numero de Estructuras: "+reset, numEstructuras)
+	//fmt.Println(green+"Numero de Estructuras: "+reset, numEstructuras)
 	return int64(numEstructuras)
 }
 
@@ -326,13 +326,13 @@ func SplitSubN(s string, n int) []string {
 	subs := []string{}
 
 	runes := bytes.Runes([]byte(s))
-	l := len(runes)
+	longitud := len(runes)
 	for i, r := range runes {
 		sub = sub + string(r)
 		if (i+1)%n == 0 {
 			subs = append(subs, sub)
 			sub = ""
-		} else if (i + 1) == l {
+		} else if (i + 1) == longitud {
 			subs = append(subs, sub)
 		}
 	}
@@ -664,10 +664,10 @@ func EliminarDisco(path string) {
 					err := os.Remove(path)
 					if err != nil {
 						//println(err)
-						fmt.Println(red + "[ERROR]" + reset + "El archivo no se ha podido eliminar")
+						fmt.Println(red + "[ERROR]" + reset + "El disco no se ha podido eliminar")
 						break
 					} else {
-						fmt.Println(green + "[EXITO]" + reset + "El archivo ha sido eliminado con exito")
+						fmt.Println(green + "[EXITO]" + reset + "El disco ha sido eliminado con exito")
 						break
 					}
 				} else if tecla == "n" || tecla == "N" {
@@ -1629,19 +1629,19 @@ func FormateLWH(id, tipoFormateo string) {
 		//********************************************************
 		fmt.Println(cyan+"Tamaño Particion: "+reset, tamParticion)
 		tamSuperBoot := int64(binary.Size(SUPERBOOT{}))
-		fmt.Println("Tamaño Super Boot: ", tamSuperBoot)
+		//fmt.Println("Tamaño Super Boot: ", tamSuperBoot)
 		tamArbolVirtualDirectorio := int64(unsafe.Sizeof(ARBOLVIRTUALDIRECTORIO{}))
-		fmt.Println("Tamaño Arbol Virtual: ", tamArbolVirtualDirectorio)
+		//fmt.Println("Tamaño Arbol Virtual: ", tamArbolVirtualDirectorio)
 		tamDetalleDirectorio := int64(binary.Size(DETALLEDIRECTORIO{}))
-		fmt.Println("Tamaño Detalle Directorio: ", tamDetalleDirectorio)
+		//fmt.Println("Tamaño Detalle Directorio: ", tamDetalleDirectorio)
 		tamTablaInodo := int64(binary.Size(TABLAINODO{}))
-		fmt.Println("Tamaño Tabla Inodo: ", tamTablaInodo)
+		//fmt.Println("Tamaño Tabla Inodo: ", tamTablaInodo)
 		tamBloqueDatos := int64(binary.Size(BLOQUEDATOS{}))
-		fmt.Println("Tamaño Bloque Datos: ", tamBloqueDatos)
+		//fmt.Println("Tamaño Bloque Datos: ", tamBloqueDatos)
 		tamBitacora := int64(unsafe.Sizeof(BITACORA{}))
-		fmt.Println("Tamaño Bitacora: ", tamBitacora)
+		//fmt.Println("Tamaño Bitacora: ", tamBitacora)
 		numEstructuras := numeroDeEstructuras(tamParticion, tamSuperBoot, tamArbolVirtualDirectorio, tamDetalleDirectorio, tamTablaInodo, tamBloqueDatos, tamBitacora)
-		fmt.Println(red+"Numero de Estructuras: "+reset, numEstructuras)
+		fmt.Println(cyan+"Numero de Estructuras: "+reset, numEstructuras)
 
 		if numEstructuras == 0 {
 			fmt.Println(red + "[ERROR]" + reset + "NO HAY ESPACIO SUFICIENTE PARA CREAR EL SISTEMA DE ARCHIVOS LWH")
@@ -1659,10 +1659,10 @@ func FormateLWH(id, tipoFormateo string) {
 			bitmapBloqueDatos[i] = '0'
 		}
 
-		fmt.Println("Bitmap Arbol Virtual: ", binary.Size(bitmapArbolVirtualDirectorio))
-		fmt.Println("Bitmap Detalle Directorio: ", binary.Size(bitmapDetalleDirectorio))
-		fmt.Println("Bitmap Tabla Inodos: ", binary.Size(bitmapTablaInodos))
-		fmt.Println("Bitmap Bloque Datos: ", binary.Size(bitmapBloqueDatos))
+		//fmt.Println("Bitmap Arbol Virtual: ", binary.Size(bitmapArbolVirtualDirectorio))
+		//fmt.Println("Bitmap Detalle Directorio: ", binary.Size(bitmapDetalleDirectorio))
+		//fmt.Println("Bitmap Tabla Inodos: ", binary.Size(bitmapTablaInodos))
+		//fmt.Println("Bitmap Bloque Datos: ", binary.Size(bitmapBloqueDatos))
 
 		//Se obtiene el nombre del disco
 		_, nombreArchivo := filepath.Split(path)
@@ -1703,10 +1703,10 @@ func FormateLWH(id, tipoFormateo string) {
 		sb.SbSizeStructDetalleDirectorio = tamDetalleDirectorio
 		sb.SbSizeStructInodo = tamTablaInodo
 		sb.SbSizeStructBloque = tamBloqueDatos
-		sb.SbFirstFreeBitArbolDirectorio = 0
-		sb.SbFirstFreeBitDetalleDirectorio = 0
-		sb.SbFirstFreeBitTablaInodo = 0
-		sb.SbFirstFreeBitBloques = 0
+		sb.SbFirstFreeBitArbolDirectorio = 1
+		sb.SbFirstFreeBitDetalleDirectorio = 1
+		sb.SbFirstFreeBitTablaInodo = 1
+		sb.SbFirstFreeBitBloques = 1
 		sb.SbMagicNum = 201602694
 		//********************************************************
 		//Se escribe el Super Boot en el disco
@@ -1862,7 +1862,7 @@ func FormateLWH(id, tipoFormateo string) {
 			bloque.DbDato[contLongitud] = cadenaUserTxt[i]
 			if contLongitud == 24 {
 				//Se escribe el bloque lleno
-				fmt.Println(sb.SbApBloques + (tamBloqueDatos * contCuantoBloquesVan))
+				//fmt.Println(sb.SbApBloques + (tamBloqueDatos * contCuantoBloquesVan))
 				file.Seek(sb.SbApBloques+(tamBloqueDatos*contCuantoBloquesVan), 0)
 				var valorBinarioBloque bytes.Buffer
 				binary.Write(&valorBinarioBloque, binary.BigEndian, &bloque)
@@ -1884,6 +1884,8 @@ func FormateLWH(id, tipoFormateo string) {
 		bitmapBloqueDatos[0] = '1'
 		bitmapBloqueDatos[1] = '1'
 		reescribirBitmap(file, sb.SbApBitmapBloques, bitmapBloqueDatos)
+
+		fmt.Println(green + "[EXITO]" + reset + "El sistema de archivos LWH se ha creado con exito")
 	}
 }
 
@@ -1934,7 +1936,7 @@ func Login(usr, pwd, id string) {
 			numEstructuraTreeCompleteMov = 0
 			CadenaRetornoUserTXT = ""
 			recorrerArbolRecursivoRetornarUsersTxt(file, sb, 3)
-			fmt.Println(cyan + "Cadena USERS.TXT: " + reset + CadenaRetornoUserTXT)
+			//	fmt.Println(cyan + "Cadena USERS.TXT: " + reset + CadenaRetornoUserTXT)
 			//********************************************************
 			//Se separa el contenido (SPLIT)
 			//********************************************************
@@ -2025,7 +2027,7 @@ func CrearGrupo(id, name string) {
 			numEstructuraTreeComplete = 0
 			CadenaRetornoUserTXT = ""
 			recorrerArbolRecursivoRetornarUsersTxt(file, sb, 3)
-			fmt.Println(cyan + "Cadena USERS.TXT: " + reset + CadenaRetornoUserTXT)
+			//fmt.Println(cyan + "Cadena USERS.TXT: " + reset + CadenaRetornoUserTXT)
 			//********************************************************
 			//Se separa el contenido (SPLIT) y se verifica si el
 			//usuario ya existe
@@ -2448,14 +2450,16 @@ func CrearDirectorio(id, path string, pActivo bool) {
 
 				verificarNivelesRuta(file, sb, cadenaDivididaSlash, false, 0, 1)
 
-				fmt.Println(red + "********************************************" + reset)
-				for i := 0; i < len(RArbol); i++ {
-					fmt.Println("Nivel: ", RArbol[i].nivel)
-					fmt.Println("Nombre: ", RArbol[i].nombre, ", len: ", len(RArbol[i].nombre))
-					fmt.Println("Puntero: ", RArbol[i].puntero)
-					fmt.Println(cyan + "----------------" + reset)
-				}
-				fmt.Println(red + "********************************************" + reset)
+				/*
+					fmt.Println(red + "********************************************" + reset)
+					for i := 0; i < len(RArbol); i++ {
+						fmt.Println("Nivel: ", RArbol[i].nivel)
+						fmt.Println("Nombre: ", RArbol[i].nombre, ", len: ", len(RArbol[i].nombre))
+						fmt.Println("Puntero: ", RArbol[i].puntero)
+						fmt.Println(cyan + "----------------" + reset)
+					}
+					fmt.Println(red + "********************************************" + reset)
+				*/
 				cuantoNivelesTieneLaRuta := len(cadenaDivididaSlash)
 				cuantosNivelesCumple := 0
 
@@ -3097,24 +3101,9 @@ func verificarNivelesRuta(file *os.File, sb SUPERBOOT, arregloRutas []string, so
 	if tipoArchivo == 1 { //SE UTILIZA PARA RECORRER AL PADRE
 		var avd ARBOLVIRTUALDIRECTORIO
 		avd = leerAVD(file, sb.SbApArbolDirectorio+(sb.SbSizeStructArbolDirectorio*posicion))
-		if contadorRuta == 0 {
-			/*
-				var ra RARBOL
-				ra.nivel = 0
-				var nombreP1 string
-				for i1, valor1 := range avd.AvdNombreDirectorio {
-					if avd.AvdNombreDirectorio[i1] != 0 {
-						nombreP1 += string(valor1)
-					}
-				}
-				ra.nombre = nombreP1
-				ra.puntero = posicion
-				RArbol = append(RArbol, ra)
-			*/
-		}
 		var cont int = 0
-		var posicionXD int64
-		posicionXD = posicion
+		//var posicionXD int64
+		//posicionXD = posicion
 		//fmt.Println("Contador ruta: ", contadorRuta)
 		//fmt.Println("Nombre en contador:", arregloRutas[contadorRuta])
 		if soyYoMismo == false {
@@ -3132,10 +3121,10 @@ func verificarNivelesRuta(file *os.File, sb SUPERBOOT, arregloRutas []string, so
 					}
 				}
 				if contadorRuta < int64(len(arregloRutas)) {
-					fmt.Println(green + arregloRutas[contadorRuta] + reset)
-					fmt.Println(yellow + nombreDirectorio + reset)
+					//fmt.Println(green + arregloRutas[contadorRuta] + reset)
+					//fmt.Println(yellow + nombreDirectorio + reset)
 					if arregloRutas[contadorRuta] == nombreDirectorio {
-						fmt.Println("[TIPO1]pos ", i, ", grado: ", posicionXD, " {"+string(avd.AvdNombreDirectorio[:])+"} -> ", avd.AvdApArraySubdirectorios[i])
+						//fmt.Println("[TIPO1]pos ", i, ", grado: ", posicionXD, " {"+string(avd.AvdNombreDirectorio[:])+"} -> ", avd.AvdApArraySubdirectorios[i])
 						var ra RARBOL
 						ra.nivel = contadorRuta
 						ra.nombre = nombreDirectorio
@@ -3143,7 +3132,7 @@ func verificarNivelesRuta(file *os.File, sb SUPERBOOT, arregloRutas []string, so
 						verificarCopia := false
 						for j := range RArbol {
 							if RArbol[j].nivel == ra.nivel && RArbol[j].nombre == ra.nombre {
-								fmt.Println("SOYYYYY COOOOOPIIIIIIAAAA")
+								//fmt.Println("SOYYYYY COOOOOPIIIIIIAAAA")
 								verificarCopia = true
 							} else {
 
@@ -3158,14 +3147,14 @@ func verificarNivelesRuta(file *os.File, sb SUPERBOOT, arregloRutas []string, so
 				}
 				cont++
 			} else if i == 7 && avd.AvdApArbolVirtualDirectorio != 0 {
-				fmt.Println("[TIPO1]pos ind", i, ", grado: ", posicionXD, " {"+string(avd.AvdNombreDirectorio[:])+"} -> ", avd.AvdApArbolVirtualDirectorio)
+				//fmt.Println("[TIPO1]pos ind", i, ", grado: ", posicionXD, " {"+string(avd.AvdNombreDirectorio[:])+"} -> ", avd.AvdApArbolVirtualDirectorio)
 				var apuntador int64
 				apuntador = avd.AvdApArbolVirtualDirectorio
 				verificarNivelesRuta(file, sb, arregloRutas, true, apuntador-1, 1)
 			}
 		}
 		if cont == 0 && soyYoMismo == false {
-			fmt.Println("[TIPO1]pos  X , grado: ", posicion, " {"+string(avd.AvdNombreDirectorio[:])+"} -> NADA")
+			//fmt.Println("[TIPO1]pos  X , grado: ", posicion, " {"+string(avd.AvdNombreDirectorio[:])+"} -> NADA")
 			var ra RARBOL
 			ra.nivel = contadorRuta
 			var nombreDirectorio string
@@ -3174,13 +3163,13 @@ func verificarNivelesRuta(file *os.File, sb SUPERBOOT, arregloRutas []string, so
 					nombreDirectorio += string(valor1)
 				}
 			}
-			fmt.Println(nombreDirectorio)
+			//fmt.Println(nombreDirectorio)
 			ra.nombre = nombreDirectorio
 			ra.puntero = posicion
 			verificarCopia := false
 			for i := range RArbol {
 				if RArbol[i].nivel == ra.nivel && RArbol[i].nombre == ra.nombre {
-					fmt.Println("SOYYYYY COOOOOPIIIIIIAAAA")
+					//fmt.Println("SOYYYYY COOOOOPIIIIIIAAAA")
 					verificarCopia = true
 				}
 			}
@@ -3238,7 +3227,7 @@ func CrearArchivo(id, path string, pActivo bool, size, cont string) {
 			//Se carga el bitmap del inodo y bloques
 			//********************************************************
 			bitmapTablaInodo := retornarBitmap(file, sb.SbApBitmapTablaInodo, sb)
-			fmt.Println(bitmapTablaInodo)
+			//fmt.Println(bitmapTablaInodo)
 
 			//********************************************************
 			//Se reinician los arreglos de apuntadores, los cuales se
@@ -3265,15 +3254,15 @@ func CrearArchivo(id, path string, pActivo bool, size, cont string) {
 			copy(cadenaDivididaSinArchivo[ultimoElementoEnCadenaDividida:], cadenaDivididaSinArchivo[ultimoElementoEnCadenaDividida+1:])
 			cadenaDivididaSinArchivo[len(cadenaDivididaSinArchivo)-1] = ""
 			cadenaDivididaSinArchivo = cadenaDivididaSinArchivo[:len(cadenaDivididaSinArchivo)-1]
-			fmt.Println("CADENA DIVIDIDA SIN ARCHIVOS: ", cadenaDivididaSinArchivo)
+			//fmt.Println("CADENA DIVIDIDA SIN ARCHIVOS: ", cadenaDivididaSinArchivo)
 
 			//********************************************************
 			//Se crea la carpeta de no existir
 			//********************************************************
 			rutaArchivo, NombreArchivo := filepath.Split(path)
 			rutaArchivo = string([]rune(rutaArchivo)[:len(rutaArchivo)-1])
-			fmt.Println("Ruta:", rutaArchivo)      // /ruta/hacia/algun/lado/
-			fmt.Println("Archivo:", NombreArchivo) // nombre.tipo
+			//fmt.Println("Ruta:", rutaArchivo)      // /ruta/hacia/algun/lado/
+			//fmt.Println("Archivo:", NombreArchivo) // nombre.tipo
 			//SI LA CARPETA NO EXISTE Y EL COMANDO -P VIENE ACTIVO, SE PROCEDE A CREAR LA RUTA
 			if pActivo == true {
 				CrearDirectorio(id, rutaArchivo, true)
@@ -3290,14 +3279,16 @@ func CrearArchivo(id, path string, pActivo bool, size, cont string) {
 
 			verificarNivelesRuta(file, sb, cadenaDivididaSinArchivo, false, 0, 1)
 
-			fmt.Println(red + "********************************************" + reset)
-			for i := 0; i < len(RArbol); i++ {
-				fmt.Println("Nivel: ", RArbol[i].nivel)
-				fmt.Println("Nombre: ", RArbol[i].nombre, ", len: ", len(RArbol[i].nombre))
-				fmt.Println("Puntero: ", RArbol[i].puntero)
-				fmt.Println(cyan + "----------------" + reset)
-			}
-			fmt.Println(red + "********************************************" + reset)
+			/*
+				fmt.Println(red + "********************************************" + reset)
+				for i := 0; i < len(RArbol); i++ {
+					fmt.Println("Nivel: ", RArbol[i].nivel)
+					fmt.Println("Nombre: ", RArbol[i].nombre, ", len: ", len(RArbol[i].nombre))
+					fmt.Println("Puntero: ", RArbol[i].puntero)
+					fmt.Println(cyan + "----------------" + reset)
+				}
+				fmt.Println(red + "********************************************" + reset)
+			*/
 			cuantoNivelesTieneLaRuta := len(cadenaDivididaSlash)
 			cuantosNivelesCumple := 0
 
@@ -3321,11 +3312,11 @@ func CrearArchivo(id, path string, pActivo bool, size, cont string) {
 				}
 			}
 
-			fmt.Println(ArbolDeCumplimientos)
-			fmt.Println("Niveles de la ruta: ", cuantoNivelesTieneLaRuta)
-			fmt.Println("Niveles que se cumplen: ", cuantosNivelesCumple)
+			//fmt.Println(ArbolDeCumplimientos)
+			//fmt.Println("Niveles de la ruta: ", cuantoNivelesTieneLaRuta)
+			//fmt.Println("Niveles que se cumplen: ", cuantosNivelesCumple)
 			var cuantosNivelesNuevos int = cuantoNivelesTieneLaRuta - cuantosNivelesCumple
-			fmt.Println("Niveles nuevo a crear: ", cuantosNivelesNuevos)
+			//fmt.Println("Niveles nuevo a crear: ", cuantosNivelesNuevos)
 			existeElPadre := false
 			if cuantosNivelesNuevos > 1 {
 				fmt.Println(red + "[ERROR]" + reset + "El padre de la carpeta que desea crear, no existe")
@@ -3334,10 +3325,12 @@ func CrearArchivo(id, path string, pActivo bool, size, cont string) {
 				existeElPadre = true
 			}
 			if existeElPadre == true {
-				fmt.Println(red + "********************************************" + reset)
-				fmt.Println("Nombre Carpeta: ", RArbol[len(RArbol)-1].nombre)
-				fmt.Println("Puntero a DD: ", RArbol[len(RArbol)-1].puntero)
-				fmt.Println(red + "********************************************" + reset)
+				/*
+					fmt.Println(red + "********************************************" + reset)
+					fmt.Println("Nombre Carpeta: ", RArbol[len(RArbol)-1].nombre)
+					fmt.Println("Puntero a DD: ", RArbol[len(RArbol)-1].puntero)
+					fmt.Println(red + "********************************************" + reset)
+				*/
 				//********************************************************
 				//Se verifica la posicion disponible en el bitmap Inodos
 				//para la escritura
@@ -3358,9 +3351,9 @@ func CrearArchivo(id, path string, pActivo bool, size, cont string) {
 				posicionDetalleDirectorio := avd.AvdApDetalleDirectorio - 1
 				var queTablaInodo int64
 				existeNombreRepetido := false
-				fmt.Println("DETALLE DIRECTORIO: ", avd.AvdApDetalleDirectorio)
+				//fmt.Println("DETALLE DIRECTORIO: ", avd.AvdApDetalleDirectorio)
 				for {
-					fmt.Println(green+"POSICION: ", posicionDetalleDirectorio, reset)
+					//fmt.Println(green+"POSICION: ", posicionDetalleDirectorio, reset)
 					//********************************************************
 					//Se busca espacio disponible para escribir el nombre del
 					//archivo
@@ -3378,7 +3371,7 @@ func CrearArchivo(id, path string, pActivo bool, size, cont string) {
 								break
 							}
 						} else if ddAnterior.DdArrayFiles[k].DdFileApInodo == 0 {
-							fmt.Println("LIBRE: ", k)
+							//fmt.Println("LIBRE: ", k)
 							copy(ddAnterior.DdArrayFiles[k].DdFileNombre[:], NombreArchivo)
 							ddAnterior.DdArrayFiles[k].DdFileApInodo = int64(posicionLibreEnBitmapTablaInodo + 1)
 							queTablaInodo = int64(posicionLibreEnBitmapTablaInodo + 1)
@@ -3403,7 +3396,7 @@ func CrearArchivo(id, path string, pActivo bool, size, cont string) {
 							for j := 0; j < len(bitmapDetalleDirectorio); j++ {
 								//fmt.Println(yellow+"ESTA ES LA POSICION EN USO: "+reset, j)
 								if bitmapDetalleDirectorio[j] == '0' {
-									fmt.Println(cyan+"ESTA ES LA POSICION DEL NUEVO DD: "+reset, j+1)
+									//fmt.Println(cyan+"ESTA ES LA POSICION DEL NUEVO DD: "+reset, j+1)
 									posicionAEscribirNuevoDetalleDirectorio = int64(j + 1)
 									bitmapDetalleDirectorio[j] = '1'
 									break
@@ -3501,22 +3494,22 @@ func CrearArchivo(id, path string, pActivo bool, size, cont string) {
 						//Se realiza el conteo de cuantos bloques se necesitan y
 						//cuantos hay disponibles
 						//********************************************************
-						fmt.Println(queTablaInodo)
+						//fmt.Println(queTablaInodo)
 						tamEnBytesArchivo, _ := strconv.ParseInt(size, 10, 64)
 						totalDeBloques := tamEnBytesArchivo / 25.0
 						restoBloques := tamEnBytesArchivo % 25.0
 						if restoBloques != 0 {
 							totalDeBloques++
 						}
-						fmt.Println("Total de Bloques a usar: ", totalDeBloques)
+						//fmt.Println("Total de Bloques a usar: ", totalDeBloques)
 						var contadorBloquesDisponibles int64 = 0
 						for i := 0; i < len(bitmapBloques); i++ {
 							if bitmapBloques[i] == '0' {
 								contadorBloquesDisponibles++
 							}
 						}
-						fmt.Println("BITMAP BLOQUES: ", bitmapBloques)
-						fmt.Println("Bloques Disponibles: ", contadorBloquesDisponibles)
+						//fmt.Println("BITMAP BLOQUES: ", bitmapBloques)
+						//fmt.Println("Bloques Disponibles: ", contadorBloquesDisponibles)
 						if contadorBloquesDisponibles >= totalDeBloques {
 							numEstructuraTreeComplete = 0 //Solo se reinicia
 							numEstructuraTreeComplete = queTablaInodo - 1
@@ -3559,7 +3552,7 @@ func verificarDisponibilidadDirectorio(file *os.File, sb SUPERBOOT, posicion int
 	if tipoArchivo == 2 { //SE UTILIZA PARA RECORRER AL PADRE
 		var dd DETALLEDIRECTORIO
 		dd = leerDD(file, sb.SbApDetalleDirectorio+(sb.SbSizeStructDetalleDirectorio*posicion))
-		fmt.Println("ESTOY EN: ", posicion)
+		//fmt.Println("ESTOY EN: ", posicion)
 		var cont int = 0
 		for i := 0; i < 6; i++ {
 			if i < 5 && dd.DdArrayFiles[i].DdFileApInodo == 0 {
@@ -3568,10 +3561,10 @@ func verificarDisponibilidadDirectorio(file *os.File, sb SUPERBOOT, posicion int
 				DirectorioLibre = append(DirectorioLibre, dl)
 				break
 			} else if i < 5 && dd.DdArrayFiles[i].DdFileApInodo != 0 {
-				fmt.Println("[TIPO2]pos ", i, " ->", dd.DdArrayFiles[i].DdFileApInodo)
+				//fmt.Println("[TIPO2]pos ", i, " ->", dd.DdArrayFiles[i].DdFileApInodo)
 				cont++
 			} else if i == 5 && dd.DdApDetalleDirectorio != 0 && cont == 5 {
-				fmt.Println("[TIPO2]pos ind", i)
+				//fmt.Println("[TIPO2]pos ind", i)
 				verificarDisponibilidadDirectorio(file, sb, dd.DdApDetalleDirectorio-1, 1)
 			}
 		}
@@ -3588,12 +3581,12 @@ func retornarCadenaTextoArchivoArbolRecursivo(file *os.File, sb SUPERBOOT, tipoA
 		for i := 0; i < 5; i++ {
 			if i < 4 && ti.IArrayBloques[i] != 0 {
 				numEstructuraTreeCompleteMov = ti.ICountInodo - 1
-				fmt.Println("[TIPO3]pos ", i, ",", numEstructuraTreeCompleteMov, ":", ti.IArrayBloques[i])
+				//fmt.Println("[TIPO3]pos ", i, ",", numEstructuraTreeCompleteMov, ":", ti.IArrayBloques[i])
 				numEstructuraTreeComplete = ti.IArrayBloques[i]
 				numEstructuraTreeComplete--
 				recorrerArbolRecursivoRetornarUsersTxt(file, sb, 4)
 			} else if i == 4 && ti.IApIndirecto != 0 {
-				fmt.Println("[TIPO3]pos ind", i, ":", ti.IApIndirecto)
+				//fmt.Println("[TIPO3]pos ind", i, ":", ti.IApIndirecto)
 				numEstructuraTreeComplete = ti.IApIndirecto
 				numEstructuraTreeComplete--
 				recorrerArbolRecursivoRetornarUsersTxt(file, sb, 3)
@@ -3606,7 +3599,7 @@ func retornarCadenaTextoArchivoArbolRecursivo(file *os.File, sb SUPERBOOT, tipoA
 				CadenaRetornoArchivo += string(bd.DbDato[i])
 			}
 		}
-		fmt.Println("[TIPO4]pos: ", string(bd.DbDato[:]))
+		//fmt.Println("[TIPO4]pos: ", string(bd.DbDato[:]))
 	}
 }
 
@@ -3616,7 +3609,7 @@ func modificarArchivo(file *os.File, sb SUPERBOOT, inodoPrincipal int64, tipo in
 	//********************************************************
 	bitmapTablaInodos := retornarBitmap(file, sb.SbApBitmapTablaInodo, sb)
 	bitmapBloques := retornarBitmap(file, sb.SbApBitmapBloques, sb)
-	fmt.Println(cyan + "Cadena: " + reset + CadenaRetornoArchivo)
+	//fmt.Println(cyan + "Cadena: " + reset + CadenaRetornoArchivo)
 	tamCadena := len(CadenaRetornoArchivo)
 	//********************************************************
 	//Se reinician los arreglos de apuntadores, los cuales se
@@ -3626,12 +3619,12 @@ func modificarArchivo(file *os.File, sb SUPERBOOT, inodoPrincipal int64, tipo in
 	ApuntadoresBloqueUsoArchivo = nil
 	ApuntadoresInodosUsoArchivo = nil
 	ApuntadoresInodosUsoArchivo = append(ApuntadoresInodosUsoArchivo, inodoPrincipal+1) //Se agrega el inodo que esta siempre en uso
-	fmt.Println("Inodo Principal: ", inodoPrincipal)
+	//fmt.Println("Inodo Principal: ", inodoPrincipal)
 	numEstructuraTreeComplete = inodoPrincipal
 	recorrerArbolRecursivoRetornarApuntadoresArchivo(file, sb, 3)
-	fmt.Println("Tamaño cadena: ", tamCadena)
-	fmt.Println("Bitmap Inodos: ", bitmapTablaInodos)
-	fmt.Println("Bitmap Bloques: ", bitmapBloques)
+	//fmt.Println("Tamaño cadena: ", tamCadena)
+	//fmt.Println("Bitmap Inodos: ", bitmapTablaInodos)
+	//fmt.Println("Bitmap Bloques: ", bitmapBloques)
 	//********************************************************
 	//Se calculan cuantos bloques se usaran y se valida si hay
 	//espacio suficiente en el bitmap
@@ -3642,11 +3635,11 @@ func modificarArchivo(file *os.File, sb SUPERBOOT, inodoPrincipal int64, tipo in
 		totalDeBloques++
 	}
 	totalDeBloquesNuevos := totalDeBloques - len(ApuntadoresBloqueUsoArchivo)
-	fmt.Println("Total Bloques: ", totalDeBloques)
-	fmt.Println("Bloques nuevos: ", totalDeBloquesNuevos)
-	fmt.Println("Tamano Bitmap Bloques: ", len(bitmapBloques))
-	fmt.Println("Apuntadores bloques en uso: ", ApuntadoresBloqueUsoArchivo[:])
-	fmt.Println("Apuntadores indodos en uso: ", ApuntadoresInodosUsoArchivo[:])
+	//fmt.Println("Total Bloques: ", totalDeBloques)
+	//fmt.Println("Bloques nuevos: ", totalDeBloquesNuevos)
+	//fmt.Println("Tamano Bitmap Bloques: ", len(bitmapBloques))
+	//fmt.Println("Apuntadores bloques en uso: ", ApuntadoresBloqueUsoArchivo[:])
+	//fmt.Println("Apuntadores indodos en uso: ", ApuntadoresInodosUsoArchivo[:])
 
 	var todasLasPosicionesAEscribirBloques []int64
 	if ApuntadoresBloqueUsoArchivo != nil {
@@ -3674,8 +3667,8 @@ func modificarArchivo(file *os.File, sb SUPERBOOT, inodoPrincipal int64, tipo in
 				contadorBloquesLibres--
 			}
 		}
-		fmt.Println(magenta + "TODAS LAS POSICIONES DE BLOQUES: " + reset)
-		fmt.Println(todasLasPosicionesAEscribirBloques)
+		//fmt.Println(magenta + "TODAS LAS POSICIONES DE BLOQUES: " + reset)
+		//fmt.Println(todasLasPosicionesAEscribirBloques)
 		existenBloquesSuficientes = true
 	}
 
@@ -3690,7 +3683,7 @@ func modificarArchivo(file *os.File, sb SUPERBOOT, inodoPrincipal int64, tipo in
 		totalDeInodos++
 	}
 	totalDeInodosNuevos := totalDeInodos - len(ApuntadoresInodosUsoArchivo)
-	fmt.Println("Total de inodos nuevos: ", totalDeInodosNuevos)
+	//fmt.Println("Total de inodos nuevos: ", totalDeInodosNuevos)
 
 	var todasLasPosicionesAEscribirInodos []int64
 	if ApuntadoresInodosUsoArchivo != nil {
@@ -3717,8 +3710,8 @@ func modificarArchivo(file *os.File, sb SUPERBOOT, inodoPrincipal int64, tipo in
 				contadorInodosLibres--
 			}
 		}
-		fmt.Println(magenta + "TODAS LAS POSICIONES DE INODOS: " + reset)
-		fmt.Println(todasLasPosicionesAEscribirInodos)
+		//fmt.Println(magenta + "TODAS LAS POSICIONES DE INODOS: " + reset)
+		//fmt.Println(todasLasPosicionesAEscribirInodos)
 		existenInodosSuficientes = true
 	}
 
@@ -3726,7 +3719,7 @@ func modificarArchivo(file *os.File, sb SUPERBOOT, inodoPrincipal int64, tipo in
 		//********************************************************
 		//Se escriben las nuevas estructuras
 		//********************************************************
-		fmt.Println("T: ", totalDeBloques)
+		//fmt.Println("T: ", totalDeBloques)
 		contPosBloque := totalDeBloques
 		numPosBloque := 0
 		for i := 0; i < len(todasLasPosicionesAEscribirInodos); i++ {
@@ -3736,13 +3729,13 @@ func modificarArchivo(file *os.File, sb SUPERBOOT, inodoPrincipal int64, tipo in
 			nuevoTI.ICountBloquesAsignados = int64(totalDeBloques)
 			for j := 0; j < 4; j++ {
 				if contPosBloque != 0 {
-					fmt.Println(todasLasPosicionesAEscribirBloques[numPosBloque])
+					//fmt.Println(todasLasPosicionesAEscribirBloques[numPosBloque])
 					nuevoTI.IArrayBloques[j] = todasLasPosicionesAEscribirBloques[numPosBloque]
 					numPosBloque++
 					contPosBloque--
 				}
 			}
-			fmt.Println("mamarre")
+			//fmt.Println("mamarre")
 			if contPosBloque != 0 {
 				nuevoTI.IApIndirecto = todasLasPosicionesAEscribirInodos[i] + 1
 			}
@@ -3786,7 +3779,7 @@ func modificarArchivo(file *os.File, sb SUPERBOOT, inodoPrincipal int64, tipo in
 		for i := 0; i < len(todasLasPosicionesAEscribirInodos); i++ {
 			nuevoBitmapTablaInodos[todasLasPosicionesAEscribirInodos[i]-1] = '1'
 		}
-		fmt.Println(red, nuevoBitmapTablaInodos, reset)
+		//fmt.Println(red, nuevoBitmapTablaInodos, reset)
 		reescribirBitmap(file, sb.SbApBitmapTablaInodo, nuevoBitmapTablaInodos)
 		nuevoBitmapBloques := bitmapBloques
 		for i := 0; i < len(todasLasPosicionesAEscribirBloques); i++ {
@@ -3809,13 +3802,622 @@ func recorrerArbolRecursivoRetornarApuntadoresArchivo(file *os.File, sb SUPERBOO
 		for i := 0; i < 5; i++ {
 			if i < 4 && ti.IArrayBloques[i] != 0 {
 				numEstructuraTreeComplete = ti.IArrayBloques[i]
-				ApuntadoresBloqueUsoArchivo = append(ApuntadoresBloqueUsoUSERTXT, ti.IArrayBloques[i])
+				//ApuntadoresBloqueUsoArchivo = append(ApuntadoresBloqueUsoUSERTXT, ti.IArrayBloques[i])
+				ApuntadoresBloqueUsoArchivo = append(ApuntadoresBloqueUsoArchivo, ti.IArrayBloques[i])
 				numEstructuraTreeComplete--
 			} else if i == 4 && ti.IApIndirecto != 0 {
 				numEstructuraTreeComplete = ti.IApIndirecto
-				ApuntadoresInodosUsoArchivo = append(ApuntadoresInodosUsoUSERTXT, ti.IApIndirecto)
+				//ApuntadoresInodosUsoArchivo = append(ApuntadoresInodosUsoUSERTXT, ti.IApIndirecto)
+				ApuntadoresInodosUsoArchivo = append(ApuntadoresInodosUsoArchivo, ti.IApIndirecto)
 				numEstructuraTreeComplete--
 				recorrerArbolRecursivoRetornarApuntadoresArchivo(file, sb, 3)
+			}
+		}
+	}
+}
+
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//EDIT-----EDIT-----METODOS-----METODOS-----EDIT-----EDIT-----METODOS-----METODOS-----EDIT-----EDIT-----METODOS-----METODOS-----EDIT-----EDIT
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+
+//ModificarArchivo =
+func ModificarArchivo(id, path string, size, cont string) {
+	if SesionActiva.usuario == "" {
+		fmt.Println(red + "[ERROR]" + reset + "No se encuentra ninguna sesion activa")
+	} else {
+		pathParticion, nameParticion, Existe := existeID(id)
+		var nombreAByte16 [16]byte
+		var start int64
+
+		if Existe == true {
+			mbr := leerMBR(pathParticion)
+			copy(nombreAByte16[:], nameParticion)
+			if mbr.MbrPartition1.PartName == nombreAByte16 {
+				start = mbr.MbrPartition1.PartStart
+			} else if mbr.MbrPartition2.PartName == nombreAByte16 {
+				start = mbr.MbrPartition2.PartStart
+			} else if mbr.MbrPartition3.PartName == nombreAByte16 {
+				start = mbr.MbrPartition3.PartStart
+			} else if mbr.MbrPartition4.PartName == nombreAByte16 {
+				start = mbr.MbrPartition4.PartStart
+			}
+			//********************************************************
+			//Se abre el Archivo
+			//********************************************************
+			file, err := os.OpenFile(pathParticion, os.O_RDWR, 0755)
+			defer file.Close()
+			if err != nil {
+				fmt.Println(red + "[ERROR]" + reset + "No se ha podido abrir el archivo")
+			}
+			//********************************************************
+			//Se retorna el contenido del SuperBoot
+			//********************************************************
+			sb := leerSB(pathParticion, start)
+			//********************************************************
+			//Se carga el bitmap del inodo y bloques
+			//********************************************************
+			//bitmapTablaInodo := retornarBitmap(file, sb.SbApBitmapTablaInodo, sb)
+			//fmt.Println(bitmapTablaInodo)
+
+			//********************************************************
+			//Se reinician los arreglos de apuntadores, los cuales se
+			//encargaran de almacenar los apuntadores que estan en uso
+			//para poder reescribirlos luego
+			//********************************************************
+			ApuntadoresArbolVirtualCarpetasUso = nil
+			ApuntadoresDetalleDirectorioCarpetasUso = nil
+			ApuntadoresArbolVirtualCarpetasUso = append(ApuntadoresArbolVirtualCarpetasUso, 1)           //Se agrega el 1 ya que este siempre esta
+			ApuntadoresDetalleDirectorioCarpetasUso = append(ApuntadoresDetalleDirectorioCarpetasUso, 1) //Se agrega el 1 ya que este siempre esta
+
+			//********************************************************
+			//Se separa el path para obtener las carpetas
+			//********************************************************
+			cadenaDivididaSlash := strings.SplitN(path, "/", -1)
+			for i := range cadenaDivididaSlash {
+				if cadenaDivididaSlash[i] == "" {
+					cadenaDivididaSlash[i] = "/"
+				}
+			}
+
+			cadenaDivididaSinArchivo := cadenaDivididaSlash
+			ultimoElementoEnCadenaDividida := len(cadenaDivididaSinArchivo) - 1
+			copy(cadenaDivididaSinArchivo[ultimoElementoEnCadenaDividida:], cadenaDivididaSinArchivo[ultimoElementoEnCadenaDividida+1:])
+			cadenaDivididaSinArchivo[len(cadenaDivididaSinArchivo)-1] = ""
+			cadenaDivididaSinArchivo = cadenaDivididaSinArchivo[:len(cadenaDivididaSinArchivo)-1]
+			//fmt.Println("CADENA DIVIDIDA SIN ARCHIVOS: ", cadenaDivididaSinArchivo)
+
+			//********************************************************
+			//Se crea la carpeta de no existir
+			//********************************************************
+			rutaArchivo, NombreArchivo := filepath.Split(path)
+			rutaArchivo = string([]rune(rutaArchivo)[:len(rutaArchivo)-1])
+			//fmt.Println("Ruta:", rutaArchivo)      // /ruta/hacia/algun/lado/
+			//fmt.Println("Archivo:", NombreArchivo) // nombre.tipo
+
+			RArbol = nil
+			contadorRuta = 0
+
+			var ra RARBOL
+			ra.nivel = 0
+			ra.nombre = "/"
+			ra.puntero = 0
+			RArbol = append(RArbol, ra)
+
+			verificarNivelesRuta(file, sb, cadenaDivididaSinArchivo, false, 0, 1)
+
+			/*
+				fmt.Println(red + "********************************************" + reset)
+				for i := 0; i < len(RArbol); i++ {
+					fmt.Println("Nivel: ", RArbol[i].nivel)
+					fmt.Println("Nombre: ", RArbol[i].nombre, ", len: ", len(RArbol[i].nombre))
+					fmt.Println("Puntero: ", RArbol[i].puntero)
+					fmt.Println(cyan + "----------------" + reset)
+				}
+				fmt.Println(red + "********************************************" + reset)
+			*/
+			cuantoNivelesTieneLaRuta := len(cadenaDivididaSlash)
+			cuantosNivelesCumple := 0
+
+			//********************************************************
+			//Se verifica cuandos padres existen y se valida para
+			//escribir la cantidad necesaria
+			//********************************************************
+			var ArbolDeCumplimientos []RARBOL
+			//fmt.Println(cuantoNivelesTieneLaRuta)
+			for i := 0; i < cuantoNivelesTieneLaRuta; i++ {
+				seCumplioCondicion := false
+				for j := 0; j < len(RArbol); j++ {
+					if RArbol[j].nivel == int64(i) && RArbol[j].nombre == cadenaDivididaSlash[i] {
+						ArbolDeCumplimientos = append(ArbolDeCumplimientos, RArbol[j])
+						seCumplioCondicion = true
+						cuantosNivelesCumple++
+					}
+				}
+				if seCumplioCondicion == false {
+					break
+				}
+			}
+
+			//fmt.Println(ArbolDeCumplimientos)
+			//fmt.Println("Niveles de la ruta: ", cuantoNivelesTieneLaRuta)
+			//fmt.Println("Niveles que se cumplen: ", cuantosNivelesCumple)
+			var cuantosNivelesNuevos int = cuantoNivelesTieneLaRuta - cuantosNivelesCumple
+			//fmt.Println("Niveles nuevo a crear: ", cuantosNivelesNuevos)
+			existeElPadre := false
+			if cuantosNivelesNuevos > 1 {
+				fmt.Println(red + "[ERROR]" + reset + "El padre de la carpeta que desea crear, no existe")
+			} else if cuantosNivelesNuevos == 1 {
+				//fmt.Println(green + "[EXITO]" + reset + "Si existe el padre")
+				existeElPadre = true
+			}
+			if existeElPadre == true {
+				//********************************************************
+				//Se obtiene la posicion del DD
+				//********************************************************
+				avd := leerAVD(file, sb.SbApArbolDirectorio+(sb.SbSizeStructArbolDirectorio*(ArbolDeCumplimientos[len(ArbolDeCumplimientos)-1].puntero)))
+				posicionDetalleDirectorio := avd.AvdApDetalleDirectorio - 1
+				var queTablaInodo int64
+				existeNombreRepetido := false
+				//fmt.Println("DETALLE DIRECTORIO: ", avd.AvdApDetalleDirectorio)
+				apuntadorATablaInodoResumenFile = 0
+				buscarNombreArchivo(file, sb, posicionDetalleDirectorio, NombreArchivo)
+				apuntadorATablaInodoResumenFile--
+				//fmt.Println("Este es el apuntador al inodo de el nombre del archivo: ", apuntadorATablaInodoResumenFile)
+				if apuntadorATablaInodoResumenFile == 0 {
+					fmt.Println(red + "[ERROR]" + reset + "El archivo" + cyan + NombreArchivo + reset + " no fue encontrado")
+					existeNombreRepetido = true
+				} else {
+					CadenaGlobalRetornoArchivo = ""
+					numEstructuraTreeComplete = 0
+					numEstructuraTreeComplete = apuntadorATablaInodoResumenFile
+					recorrerArbolRecursivoRetornarContenidoDelArchivo(file, sb, 3)
+					//fmt.Println(magenta + "Esta es la cadena recuperada: " + reset)
+					//fmt.Println(CadenaGlobalRetornoArchivo)
+
+					ApuntadoresBloqueUsoArchivo = nil
+					ApuntadoresInodosUsoArchivo = nil
+					ApuntadoresInodosUsoArchivo = append(ApuntadoresInodosUsoArchivo[:], apuntadorATablaInodoResumenFile+1) //Se agrega el inodo que esta siempre en uso
+					numEstructuraTreeComplete = apuntadorATablaInodoResumenFile
+					recorrerArbolRecursivoRetornarApuntadoresArchivo(file, sb, 3)
+					//fmt.Println(ApuntadoresInodosUsoArchivo)
+					//fmt.Println(ApuntadoresBloqueUsoArchivo)
+				}
+				existeNombreRepetido = true
+				if existeNombreRepetido == false {
+
+					//********************************************************
+					//Se procede a verificar si el size y cont estan activos,
+					//de ser asi, se procede a ingresar el contenido del
+					//archivo
+					//********************************************************
+					if size != "" {
+						//********************************************************
+						//Se realiza el conteo de cuantos bloques se necesitan y
+						//cuantos hay disponibles
+						//********************************************************
+						//fmt.Println(queTablaInodo)
+						tamEnBytesArchivo, _ := strconv.ParseInt(size, 10, 64)
+
+						if cont != "" {
+							CadenaRetornoArchivo = cont
+						} else {
+							abecedario := [26]string{"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z"}
+							contadorLetra := 0
+							for i := 0; i < int(tamEnBytesArchivo); i++ {
+								if contadorLetra == 26 {
+									contadorLetra = 0
+								}
+								CadenaRetornoArchivo += abecedario[contadorLetra]
+								contadorLetra++
+							}
+						}
+						modificarTamanoArchivo(file, sb, queTablaInodo-1, 3)
+					}
+				}
+			}
+		}
+	}
+}
+
+func buscarNombreArchivo(file *os.File, sb SUPERBOOT, posicion int64, nombreArchivo string) {
+	encontrado := false
+	dd := leerDD(file, sb.SbApDetalleDirectorio+(sb.SbSizeStructDetalleDirectorio*posicion))
+	for i := 0; i < 5; i++ {
+		if dd.DdArrayFiles[i].DdFileApInodo != 0 {
+			//fmt.Println("mamarre")
+			var nombreDirectorio string
+			for i1, valor1 := range dd.DdArrayFiles[i].DdFileNombre {
+				if dd.DdArrayFiles[i].DdFileNombre[i1] != 0 {
+					nombreDirectorio += string(valor1)
+				}
+			}
+			if nombreDirectorio == nombreArchivo {
+				apuntadorATablaInodoResumenFile = dd.DdArrayFiles[i].DdFileApInodo
+				encontrado = true
+			}
+		} else {
+		}
+	}
+	if encontrado == false {
+		if dd.DdApDetalleDirectorio != 0 {
+			buscarNombreArchivo(file, sb, dd.DdApDetalleDirectorio-1, nombreArchivo)
+		}
+	}
+}
+
+// CadenaGlobalRetornoArchivo ==
+var CadenaGlobalRetornoArchivo string
+
+func recorrerArbolRecursivoRetornarContenidoDelArchivo(file *os.File, sb SUPERBOOT, tipoArchivo int) {
+	//Se empieza a recorrer desde el inodo del archivo USER.TXT que siempre sera el primer INODO
+	if tipoArchivo == 3 { //CUANDO ES TIPO TABLA INODO
+		ti := leerTABLAINODO(file, sb.SbApTablaInodo+(sb.SbSizeStructInodo*numEstructuraTreeComplete))
+		for i := 0; i < 5; i++ {
+			if i < 4 && ti.IArrayBloques[i] != 0 {
+				numEstructuraTreeCompleteMov = ti.ICountInodo - 1
+				//fmt.Println("[TIPO3]pos ", i, ",", numEstructuraTreeCompleteMov, ":", ti.IArrayBloques[i])
+				numEstructuraTreeComplete = ti.IArrayBloques[i]
+				numEstructuraTreeComplete--
+				recorrerArbolRecursivoRetornarContenidoDelArchivo(file, sb, 4)
+			} else if i == 4 && ti.IApIndirecto != 0 {
+				//fmt.Println("[TIPO3]pos ind", i, ":", ti.IApIndirecto)
+				numEstructuraTreeComplete = ti.IApIndirecto
+				numEstructuraTreeComplete--
+				recorrerArbolRecursivoRetornarContenidoDelArchivo(file, sb, 3)
+			}
+		}
+	} else if tipoArchivo == 4 { //CUANDO ES TIPO BLOQUE DE DATOS
+		bd := leerBLOQUEDATOS(file, sb.SbApBloques+(sb.SbSizeStructBloque*numEstructuraTreeComplete))
+		for i := 0; i < len(bd.DbDato); i++ {
+			if bd.DbDato[i] != 0 {
+				CadenaGlobalRetornoArchivo += string(bd.DbDato[i])
+			}
+		}
+		//CadenaRetornoUserTXT += string(bd.DbDato[:])
+		//fmt.Println("[TIPO4]pos: ", string(bd.DbDato[:]))
+	}
+}
+
+func modificarTamanoArchivo(file *os.File, sb SUPERBOOT, inodoPrincipal int64, tipo int) {
+	//********************************************************
+	//Se carga el bitmap del inodo y bloques
+	//********************************************************
+	bitmapTablaInodos := retornarBitmap(file, sb.SbApBitmapTablaInodo, sb)
+	bitmapBloques := retornarBitmap(file, sb.SbApBitmapBloques, sb)
+	//fmt.Println(cyan + "Cadena: " + reset + CadenaRetornoArchivo)
+	tamCadena := len(CadenaRetornoArchivo)
+	//********************************************************
+	//Se calculan cuantos bloques se usaran y se valida si hay
+	//espacio suficiente en el bitmap
+	//********************************************************
+	totalDeBloques := tamCadena / 25.0
+	restoBloques := tamCadena % 25.0
+	if restoBloques != 0 {
+		totalDeBloques++
+	}
+	totalDeBloquesNuevos := totalDeBloques - len(ApuntadoresBloqueUsoArchivo)
+	//fmt.Println("Total Bloques: ", totalDeBloques)
+	//fmt.Println("Bloques nuevos: ", totalDeBloquesNuevos)
+	//fmt.Println("Tamano Bitmap Bloques: ", len(bitmapBloques))
+	//fmt.Println("Apuntadores bloques en uso: ", ApuntadoresBloqueUsoArchivo[:])
+	//fmt.Println("Apuntadores indodos en uso: ", ApuntadoresInodosUsoArchivo[:])
+
+	var todasLasPosicionesAEscribirBloques []int64
+	if ApuntadoresBloqueUsoArchivo != nil {
+		todasLasPosicionesAEscribirBloques = append(todasLasPosicionesAEscribirBloques[:], ApuntadoresBloqueUsoArchivo[:]...)
+	}
+	contadorBloquesLibres := totalDeBloquesNuevos
+
+	var contadorBloquesDisponibles int = 0
+	for i := 0; i < len(bitmapBloques); i++ {
+		if bitmapBloques[i] == '0' {
+			contadorBloquesDisponibles++
+		}
+	}
+
+	existenBloquesSuficientes := false
+	if contadorBloquesDisponibles < totalDeBloquesNuevos {
+		fmt.Println(red + "[ERROR]" + reset + "No hay suficientes BLOQUES para insertar el archivo")
+	} else {
+		for i := 0; i < len(bitmapBloques); i++ {
+			if contadorBloquesLibres == 0 {
+				break
+			}
+			if bitmapBloques[i] == '0' {
+				todasLasPosicionesAEscribirBloques = append(todasLasPosicionesAEscribirBloques[:], int64(i+1))
+				contadorBloquesLibres--
+			}
+		}
+		//fmt.Println(magenta + "TODAS LAS POSICIONES DE BLOQUES: " + reset)
+		//fmt.Println(todasLasPosicionesAEscribirBloques)
+		existenBloquesSuficientes = true
+	}
+
+	//********************************************************
+	//Se calculan cuantos inodos se usaran y se valida si hay
+	//espacio suficiente en el bitmap
+	//********************************************************
+
+	totalDeInodos := totalDeBloques / 4
+	restoInodos := totalDeBloques % 4
+	if restoInodos != 0 {
+		totalDeInodos++
+	}
+	totalDeInodosNuevos := totalDeInodos - len(ApuntadoresInodosUsoArchivo)
+	//fmt.Println("Total de inodos nuevos: ", totalDeInodosNuevos)
+
+	var todasLasPosicionesAEscribirInodos []int64
+	if ApuntadoresInodosUsoArchivo != nil {
+		todasLasPosicionesAEscribirInodos = append(todasLasPosicionesAEscribirInodos[:], ApuntadoresInodosUsoArchivo[:]...)
+	}
+	contadorInodosLibres := totalDeInodosNuevos
+
+	var contadorInodosDisponibles int = 0
+	for i := 0; i < len(bitmapTablaInodos); i++ {
+		if bitmapTablaInodos[i] == '0' {
+			contadorInodosDisponibles++
+		}
+	}
+	existenInodosSuficientes := false
+	if contadorInodosDisponibles < totalDeInodosNuevos {
+		fmt.Println(red + "[ERROR]" + reset + "No hay suficientes INODOS para insertar el archivo")
+	} else {
+		for i := 0; i < len(bitmapTablaInodos); i++ {
+			if contadorInodosLibres == 0 {
+				break
+			}
+			if bitmapTablaInodos[i] == '0' {
+				todasLasPosicionesAEscribirInodos = append(todasLasPosicionesAEscribirInodos[:], int64(i+1))
+				contadorInodosLibres--
+			}
+		}
+		//fmt.Println(magenta + "TODAS LAS POSICIONES DE INODOS: " + reset)
+		//fmt.Println(todasLasPosicionesAEscribirInodos)
+		existenInodosSuficientes = true
+	}
+
+	if existenBloquesSuficientes == true && existenInodosSuficientes == true {
+		//********************************************************
+		//Se escriben las nuevas estructuras
+		//********************************************************
+		//fmt.Println("T: ", totalDeBloques)
+		contPosBloque := totalDeBloques
+		numPosBloque := 0
+		for i := 0; i < len(todasLasPosicionesAEscribirInodos); i++ {
+			var nuevoTI TABLAINODO
+			nuevoTI.ICountInodo = todasLasPosicionesAEscribirInodos[i]
+			nuevoTI.ISizeArchivo = int64(totalDeBloques) * sb.SbSizeStructBloque
+			nuevoTI.ICountBloquesAsignados = int64(totalDeBloques)
+			for j := 0; j < 4; j++ {
+				if contPosBloque != 0 {
+					//fmt.Println(todasLasPosicionesAEscribirBloques[numPosBloque])
+					nuevoTI.IArrayBloques[j] = todasLasPosicionesAEscribirBloques[numPosBloque]
+					numPosBloque++
+					contPosBloque--
+				}
+			}
+			//fmt.Println("mamarre")
+			if contPosBloque != 0 {
+				nuevoTI.IApIndirecto = todasLasPosicionesAEscribirInodos[i] + 1
+			}
+			copy(nuevoTI.IGid[:], SesionActiva.grupo)
+			if SesionActiva.usuario == "root" {
+				nuevoTI.IPerm[0] = '7'
+				nuevoTI.IPerm[1] = '7'
+				nuevoTI.IPerm[2] = '7'
+			} else {
+				nuevoTI.IPerm[0] = '6'
+				nuevoTI.IPerm[1] = '6'
+				nuevoTI.IPerm[2] = '4'
+			}
+			copy(nuevoTI.IIdProper[:], SesionActiva.usuario)
+			file.Seek(sb.SbApTablaInodo+(sb.SbSizeStructInodo*(todasLasPosicionesAEscribirInodos[i]-1)), 0)
+			var valorBinarioTablaInodo bytes.Buffer
+			binary.Write(&valorBinarioTablaInodo, binary.BigEndian, &nuevoTI)
+			escribirBytes(file, valorBinarioTablaInodo.Bytes())
+		}
+
+		cadenaUserTxtSeparada := SplitSubN(CadenaRetornoArchivo, 25)
+
+		for i := 0; i < len(todasLasPosicionesAEscribirBloques); i++ {
+			var nuevoBD BLOQUEDATOS
+			var contenidoAByte25 [25]byte
+			copy(contenidoAByte25[:], cadenaUserTxtSeparada[i])
+			nuevoBD.DbDato = contenidoAByte25
+			//CadenaRetornoArchivo
+			//fmt.Println(string(contenidoAByte25[:]))
+			//fmt.Println(todasLasPosicionesAEscribirBloques[i])
+			file.Seek(sb.SbApBloques+(sb.SbSizeStructBloque*(todasLasPosicionesAEscribirBloques[i]-1)), 0)
+			var valorBinarioBloque bytes.Buffer
+			binary.Write(&valorBinarioBloque, binary.BigEndian, &nuevoBD)
+			escribirBytes(file, valorBinarioBloque.Bytes())
+		}
+
+		//********************************************************
+		//Se escriben las nuevas estructuras
+		//********************************************************
+		nuevoBitmapTablaInodos := bitmapTablaInodos
+		for i := 0; i < len(todasLasPosicionesAEscribirInodos); i++ {
+			nuevoBitmapTablaInodos[todasLasPosicionesAEscribirInodos[i]-1] = '1'
+		}
+		//fmt.Println(red, nuevoBitmapTablaInodos, reset)
+		reescribirBitmap(file, sb.SbApBitmapTablaInodo, nuevoBitmapTablaInodos)
+		nuevoBitmapBloques := bitmapBloques
+		for i := 0; i < len(todasLasPosicionesAEscribirBloques); i++ {
+			nuevoBitmapBloques[todasLasPosicionesAEscribirBloques[i]-1] = '1'
+		}
+		reescribirBitmap(file, sb.SbApBitmapBloques, nuevoBitmapBloques)
+	}
+}
+
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//CAT-----CAT-----METODOS-----METODOS-----CAT-----CAT-----METODOS-----METODOS-----CAT-----CAT-----METODOS-----METODOS-----CAT-----CAT-----MET
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+
+//ImprimirContenidoArchivo =
+func ImprimirContenidoArchivo(id, path string) {
+	if SesionActiva.usuario == "" {
+		fmt.Println(red + "[ERROR]" + reset + "No se encuentra ninguna sesion activa")
+	} else {
+		pathParticion, nameParticion, Existe := existeID(id)
+		var nombreAByte16 [16]byte
+		var start int64
+
+		if Existe == true {
+			mbr := leerMBR(pathParticion)
+			copy(nombreAByte16[:], nameParticion)
+			if mbr.MbrPartition1.PartName == nombreAByte16 {
+				start = mbr.MbrPartition1.PartStart
+			} else if mbr.MbrPartition2.PartName == nombreAByte16 {
+				start = mbr.MbrPartition2.PartStart
+			} else if mbr.MbrPartition3.PartName == nombreAByte16 {
+				start = mbr.MbrPartition3.PartStart
+			} else if mbr.MbrPartition4.PartName == nombreAByte16 {
+				start = mbr.MbrPartition4.PartStart
+			}
+			//********************************************************
+			//Se abre el Archivo
+			//********************************************************
+			file, err := os.OpenFile(pathParticion, os.O_RDWR, 0755)
+			defer file.Close()
+			if err != nil {
+				fmt.Println(red + "[ERROR]" + reset + "No se ha podido abrir el archivo")
+			}
+			//********************************************************
+			//Se retorna el contenido del SuperBoot
+			//********************************************************
+			sb := leerSB(pathParticion, start)
+
+			//********************************************************
+			//Se reinician los arreglos de apuntadores, los cuales se
+			//encargaran de almacenar los apuntadores que estan en uso
+			//para poder reescribirlos luego
+			//********************************************************
+			ApuntadoresArbolVirtualCarpetasUso = nil
+			ApuntadoresDetalleDirectorioCarpetasUso = nil
+			ApuntadoresArbolVirtualCarpetasUso = append(ApuntadoresArbolVirtualCarpetasUso, 1)           //Se agrega el 1 ya que este siempre esta
+			ApuntadoresDetalleDirectorioCarpetasUso = append(ApuntadoresDetalleDirectorioCarpetasUso, 1) //Se agrega el 1 ya que este siempre esta
+
+			//********************************************************
+			//Se separa el path para obtener las carpetas
+			//********************************************************
+			cadenaDivididaSlash := strings.SplitN(path, "/", -1)
+			for i := range cadenaDivididaSlash {
+				if cadenaDivididaSlash[i] == "" {
+					cadenaDivididaSlash[i] = "/"
+				}
+			}
+
+			cadenaDivididaSinArchivo := cadenaDivididaSlash
+			ultimoElementoEnCadenaDividida := len(cadenaDivididaSinArchivo) - 1
+			copy(cadenaDivididaSinArchivo[ultimoElementoEnCadenaDividida:], cadenaDivididaSinArchivo[ultimoElementoEnCadenaDividida+1:])
+			cadenaDivididaSinArchivo[len(cadenaDivididaSinArchivo)-1] = ""
+			cadenaDivididaSinArchivo = cadenaDivididaSinArchivo[:len(cadenaDivididaSinArchivo)-1]
+			//fmt.Println("CADENA DIVIDIDA SIN ARCHIVOS: ", cadenaDivididaSinArchivo)
+
+			//********************************************************
+			//Se crea la carpeta de no existir
+			//********************************************************
+			rutaArchivo, NombreArchivo := filepath.Split(path)
+			rutaArchivo = string([]rune(rutaArchivo)[:len(rutaArchivo)-1])
+			//fmt.Println("Ruta:", rutaArchivo)      // /ruta/hacia/algun/lado/
+			//fmt.Println("Archivo:", NombreArchivo) // nombre.tipo
+
+			RArbol = nil
+			contadorRuta = 0
+
+			var ra RARBOL
+			ra.nivel = 0
+			ra.nombre = "/"
+			ra.puntero = 0
+			RArbol = append(RArbol, ra)
+
+			verificarNivelesRuta(file, sb, cadenaDivididaSinArchivo, false, 0, 1)
+
+			/*
+				fmt.Println(red + "********************************************" + reset)
+				for i := 0; i < len(RArbol); i++ {
+					fmt.Println("Nivel: ", RArbol[i].nivel)
+					fmt.Println("Nombre: ", RArbol[i].nombre, ", len: ", len(RArbol[i].nombre))
+					fmt.Println("Puntero: ", RArbol[i].puntero)
+					fmt.Println(cyan + "----------------" + reset)
+				}
+				fmt.Println(red + "********************************************" + reset)
+			*/
+			cuantoNivelesTieneLaRuta := len(cadenaDivididaSlash)
+			cuantosNivelesCumple := 0
+
+			//********************************************************
+			//Se verifica cuandos padres existen y se valida para
+			//escribir la cantidad necesaria
+			//********************************************************
+			var ArbolDeCumplimientos []RARBOL
+			//fmt.Println(cuantoNivelesTieneLaRuta)
+			for i := 0; i < cuantoNivelesTieneLaRuta; i++ {
+				seCumplioCondicion := false
+				for j := 0; j < len(RArbol); j++ {
+					if RArbol[j].nivel == int64(i) && RArbol[j].nombre == cadenaDivididaSlash[i] {
+						ArbolDeCumplimientos = append(ArbolDeCumplimientos, RArbol[j])
+						seCumplioCondicion = true
+						cuantosNivelesCumple++
+					}
+				}
+				if seCumplioCondicion == false {
+					break
+				}
+			}
+
+			//fmt.Println(ArbolDeCumplimientos)
+			//fmt.Println("Niveles de la ruta: ", cuantoNivelesTieneLaRuta)
+			//fmt.Println("Niveles que se cumplen: ", cuantosNivelesCumple)
+			var cuantosNivelesNuevos int = cuantoNivelesTieneLaRuta - cuantosNivelesCumple
+			//fmt.Println("Niveles nuevo a crear: ", cuantosNivelesNuevos)
+			existeElPadre := false
+			if cuantosNivelesNuevos > 1 {
+				fmt.Println(red + "[ERROR]" + reset + "El padre de la carpeta que desea crear, no existe")
+			} else if cuantosNivelesNuevos == 1 {
+				//fmt.Println(green + "[EXITO]" + reset + "Si existe el padre")
+				existeElPadre = true
+			}
+			if existeElPadre == true {
+				//********************************************************
+				//Se obtiene la posicion del DD
+				//********************************************************
+				avd := leerAVD(file, sb.SbApArbolDirectorio+(sb.SbSizeStructArbolDirectorio*(ArbolDeCumplimientos[len(ArbolDeCumplimientos)-1].puntero)))
+				posicionDetalleDirectorio := avd.AvdApDetalleDirectorio - 1
+				existeNombreRepetido := false
+				//fmt.Println("DETALLE DIRECTORIO: ", avd.AvdApDetalleDirectorio)
+				apuntadorATablaInodoResumenFile = 0
+				buscarNombreArchivo(file, sb, posicionDetalleDirectorio, NombreArchivo)
+				apuntadorATablaInodoResumenFile--
+				//fmt.Println("Este es el apuntador al inodo de el nombre del archivo: ", apuntadorATablaInodoResumenFile)
+				if apuntadorATablaInodoResumenFile == 0 {
+					fmt.Println(red + "[ERROR]" + reset + "El archivo" + cyan + NombreArchivo + reset + " no fue encontrado")
+					existeNombreRepetido = true
+				} else {
+					CadenaGlobalRetornoArchivo = ""
+					numEstructuraTreeComplete = 0
+					numEstructuraTreeComplete = apuntadorATablaInodoResumenFile
+					recorrerArbolRecursivoRetornarContenidoDelArchivo(file, sb, 3)
+					//fmt.Println(magenta + "Esta es la cadena recuperada: " + reset)
+					fmt.Println(CadenaGlobalRetornoArchivo)
+				}
+				existeNombreRepetido = true
+				if existeNombreRepetido == false {
+
+				}
 			}
 		}
 	}
@@ -3864,7 +4466,13 @@ func MetodoCHMOD(id, path, ugo string, rActivo bool) {
 			//Se retorna el contenido del SuperBoot
 			//********************************************************
 			sb := leerSB(pathParticion, start)
-			fmt.Println(sb.SbApArbolDirectorio)
+			fmt.Println(sb.SbApDetalleDirectorio)
+			//********************************************************
+			//Se verifica si la ruta es una carpeta o un archivo
+			//********************************************************
+			if strings.Contains(path, ".") {
+
+			}
 		}
 	}
 }
@@ -4205,7 +4813,7 @@ func ReporteMBR(id, path string) {
 					os.Stderr.WriteString(err.Error())
 				}
 				fmt.Print(string(cmdOutput.Bytes()))
-
+				fmt.Println(green + "[EXITO]" + reset + "Reporte " + cyan + "MBR" + reset + " creado con exito")
 				ExisteID = true
 				break
 			}
@@ -4236,7 +4844,7 @@ func ReporteEBR(id, path string) string {
 		ebr = leerEBR(path, mbr.MbrPartition4.PartStart)
 		siExisteExtendida = true
 	} else {
-		fmt.Println(red + "[ERROR]" + reset + "No existe una particion extendida para generar el resumen de particiones logicas")
+		fmt.Println(yellow + "[ADVERTENCIA]" + reset + "No existe una particion extendida para generar el resumen de particiones logicas")
 	}
 
 	var tamEBR int64 = int64(binary.Size(ebr))
@@ -4443,6 +5051,7 @@ func ReporteDISK(id, path string) {
 			os.Stderr.WriteString(err.Error())
 		}
 		fmt.Print(string(cmdOutput.Bytes()))
+		fmt.Println(green + "[EXITO]" + reset + "Reporte " + cyan + "DISK" + reset + " creado con exito")
 	} else {
 		fmt.Println(red + "[ERROR]" + reset + "El id " + cyan + id + reset + " no se encuentra montado")
 	}
@@ -4531,7 +5140,7 @@ func ReporteSB(id, path string) {
 		//******************************************************
 		//Se inicia el el llenado de los datos de Graphviz
 		//******************************************************
-
+		ActualizarSUPERBOOT(id, start)
 		sb := leerSB(PathID, start)
 		cadenaReporteSB = "digraph MBR {\nnode [shape=plaintext]\nA [label=<\n<TABLE BORDER='0' CELLBORDER='1' CELLSPACING='0'>\n"
 		cadenaReporteSB += "<TR>\n<TD BGCOLOR='#5A69D6' COLSPAN='2'><font color='white'>REPORTE SB</font></TD>\n</TR>\n"
@@ -4598,6 +5207,7 @@ func ReporteSB(id, path string) {
 			os.Stderr.WriteString(err.Error())
 		}
 		fmt.Print(string(cmdOutput.Bytes()))
+		fmt.Println(green + "[EXITO]" + reset + "Reporte " + cyan + "SUPERBOOT" + reset + " creado con exito")
 	}
 }
 
@@ -4649,6 +5259,15 @@ func ReporteBitmap(id, path string, tipoReporte int) {
 			cadenaReporteBitmap = leerBitmapResumen(PathID, sb.SbApBitmapBloques, &sb)
 		}
 		crearArchivoParaReporteBitmap(path, cadenaReporteBitmap)
+		if tipoReporte == 1 {
+			fmt.Println(green + "[EXITO]" + reset + "Reporte " + cyan + "BM_ARBDIR" + reset + " creado con exito")
+		} else if tipoReporte == 2 {
+			fmt.Println(green + "[EXITO]" + reset + "Reporte " + cyan + "BM_DETDIR" + reset + " creado con exito")
+		} else if tipoReporte == 3 {
+			fmt.Println(green + "[EXITO]" + reset + "Reporte " + cyan + "BM_INODE" + reset + " creado con exito")
+		} else if tipoReporte == 4 {
+			fmt.Println(green + "[EXITO]" + reset + "Reporte " + cyan + "BM_BLOCK" + reset + " creado con exito")
+		}
 	}
 }
 
@@ -4765,6 +5384,293 @@ func ReporteTreeComplete(id, path string) {
 				os.Stderr.WriteString(err.Error())
 			}
 			fmt.Print(string(cmdOutput.Bytes()))
+			fmt.Println(green + "[EXITO]" + reset + "Reporte " + cyan + "TREE_COMPLETE" + reset + " creado con exito")
+		}
+	}
+	//leerBitmapResumen(path, )
+}
+
+//ReporteTreeFile =
+func ReporteTreeFile(id, path, ruta string) {
+	PathID, NombreParticion, ExisteID := existeID(id) //Path, nombre particion, bool si existe
+	var start int64
+
+	if ExisteID == true {
+		mbr := leerMBR(PathID)
+		var nombreAByte16 [16]byte
+		copy(nombreAByte16[:], NombreParticion)
+		if mbr.MbrPartition1.PartName == nombreAByte16 {
+			start = mbr.MbrPartition1.PartStart
+		} else if mbr.MbrPartition2.PartName == nombreAByte16 {
+			start = mbr.MbrPartition1.PartStart
+		} else if mbr.MbrPartition3.PartName == nombreAByte16 {
+			start = mbr.MbrPartition1.PartStart
+		} else if mbr.MbrPartition4.PartName == nombreAByte16 {
+			start = mbr.MbrPartition1.PartStart
+		}
+		sb := leerSB(PathID, start)
+
+		//Se abre el archivo para su uso
+		file, err := os.OpenFile(PathID, os.O_RDWR, 0755)
+		defer file.Close()
+		if err != nil {
+			fmt.Println(red + "[ERROR]" + reset + "No se ha podido abrir el archivo")
+		}
+
+		//**********************************************************************
+		//Se preparan los bitmap para saber como moverse en el archivo
+		//**********************************************************************
+		bitmapArbolVirtualDirectorio := retornarBitmap(file, sb.SbApBitmapArbolDirectorio, sb)
+		bitmapTablaInodos := retornarBitmap(file, sb.SbApBitmapTablaInodo, sb)
+		bitmapBloques := retornarBitmap(file, sb.SbApBitmapBloques, sb)
+
+		//**********************************************************************
+		//Se valida la existencia de la ruta
+		//**********************************************************************
+		cadenaDivididaSlash := strings.SplitN(ruta, "/", -1)
+		for i := range cadenaDivididaSlash {
+			if cadenaDivididaSlash[i] == "" {
+				cadenaDivididaSlash[i] = "/"
+			}
+		}
+
+		cadenaDivididaSinArchivo := cadenaDivididaSlash
+		ultimoElementoEnCadenaDividida := len(cadenaDivididaSinArchivo) - 1
+		copy(cadenaDivididaSinArchivo[ultimoElementoEnCadenaDividida:], cadenaDivididaSinArchivo[ultimoElementoEnCadenaDividida+1:])
+		cadenaDivididaSinArchivo[len(cadenaDivididaSinArchivo)-1] = ""
+		cadenaDivididaSinArchivo = cadenaDivididaSinArchivo[:len(cadenaDivididaSinArchivo)-1]
+		//fmt.Println("CADENA DIVIDIDA SIN ARCHIVOS: ", cadenaDivididaSinArchivo)
+
+		//********************************************************
+		//Se crea la carpeta de no existir
+		//********************************************************
+		rutaArchivo, NombreArchivo := filepath.Split(ruta)
+		rutaArchivo = string([]rune(rutaArchivo)[:len(rutaArchivo)-1])
+		//fmt.Println("Ruta:", rutaArchivo)      // /ruta/hacia/algun/lado/
+		//fmt.Println("Archivo:", NombreArchivo) // nombre.tipo
+		//
+		RArbol = nil
+		contadorRuta = 0
+
+		var ra RARBOL
+		ra.nivel = 0
+		ra.nombre = "/"
+		ra.puntero = 0
+		RArbol = append(RArbol, ra)
+
+		verificarNivelesRuta(file, sb, cadenaDivididaSinArchivo, false, 0, 1)
+
+		/*
+			fmt.Println(red + "********************************************" + reset)
+			for i := 0; i < len(RArbol); i++ {
+				fmt.Println("Nivel: ", RArbol[i].nivel)
+				fmt.Println("Nombre: ", RArbol[i].nombre, ", len: ", len(RArbol[i].nombre))
+				fmt.Println("Puntero: ", RArbol[i].puntero)
+				fmt.Println(cyan + "----------------" + reset)
+			}
+			fmt.Println(red + "********************************************" + reset)
+		*/
+		cuantoNivelesTieneLaRuta := len(cadenaDivididaSlash)
+		cuantosNivelesCumple := 0
+
+		//********************************************************
+		//Se verifica cuandos padres existen y se valida para
+		//escribir la cantidad necesaria
+		//********************************************************
+		var ArbolDeCumplimientos []RARBOL
+		//fmt.Println(cuantoNivelesTieneLaRuta)
+		for i := 0; i < cuantoNivelesTieneLaRuta; i++ {
+			seCumplioCondicion := false
+			for j := 0; j < len(RArbol); j++ {
+				if RArbol[j].nivel == int64(i) && RArbol[j].nombre == cadenaDivididaSlash[i] {
+					ArbolDeCumplimientos = append(ArbolDeCumplimientos, RArbol[j])
+					seCumplioCondicion = true
+					cuantosNivelesCumple++
+				}
+			}
+			if seCumplioCondicion == false {
+				break
+			}
+		}
+
+		//fmt.Println(ArbolDeCumplimientos)
+		//fmt.Println("Niveles de la ruta: ", cuantoNivelesTieneLaRuta)
+		//fmt.Println("Niveles que se cumplen: ", cuantosNivelesCumple)
+		var cuantosNivelesNuevos int = cuantoNivelesTieneLaRuta - cuantosNivelesCumple
+		//fmt.Println("Niveles nuevo a crear: ", cuantosNivelesNuevos)
+		existeElPadre := false
+		if cuantosNivelesNuevos > 1 {
+			fmt.Println(red + "[ERROR]" + reset + "El padre de la carpeta que desea crear, no existe")
+		} else if cuantosNivelesNuevos == 1 {
+			//fmt.Println(green + "[EXITO]" + reset + "Si existe el padre")
+			existeElPadre = true
+		}
+		if existeElPadre == true {
+			//**********************************************************************
+			//Se preparan los punteros que se tienen que ir a buscar
+			//**********************************************************************
+			var cadenaReporteTreeComplete string
+			cadenaReporteTreeComplete = "digraph MBR {\nnode [shape=plaintext]\nrankdir=LR;\n"
+			subCadenaReporteTreeComplete = ""
+			var esUltimo int = len(ArbolDeCumplimientos)
+			for i := 0; i < len(ArbolDeCumplimientos); i++ {
+				//fmt.Println(esUltimo)
+				if bitmapArbolVirtualDirectorio[ArbolDeCumplimientos[i].puntero] == '1' {
+					if esUltimo == 1 {
+						recorrerArbolFileReportePorBitmap(file, sb, int64(ArbolDeCumplimientos[i].puntero), int64(i), NombreArchivo, 1, true)
+					} else {
+						recorrerArbolFileReportePorBitmap(file, sb, int64(ArbolDeCumplimientos[i].puntero), int64(i), NombreArchivo, 1, false)
+					}
+				}
+				esUltimo--
+			}
+
+			//**********************************************************************
+			//Se recorren los punteros INODO y BLOQUE que utiliza el archivo
+			//**********************************************************************
+
+			ApuntadoresBloqueUsoArchivo = nil
+			ApuntadoresInodosUsoArchivo = nil
+			ApuntadoresInodosUsoArchivo = append(ApuntadoresInodosUsoArchivo[:], apuntadorATablaInodoResumenFile) //Se agrega el inodo que esta siempre en uso
+			numEstructuraTreeComplete = apuntadorATablaInodoResumenFile - 1
+			recorrerArbolRecursivoRetornarApuntadoresArchivo(file, sb, 3)
+
+			for i := 0; i < len(ApuntadoresInodosUsoArchivo); i++ {
+				//fmt.Println(ApuntadoresInodosUsoArchivo[i])
+				if bitmapTablaInodos[ApuntadoresInodosUsoArchivo[i]] == '1' {
+					recorrerArbolFileReportePorBitmap(file, sb, int64(ApuntadoresInodosUsoArchivo[i]-1), int64(i), NombreArchivo, 3, true)
+				}
+			}
+			for i := 0; i < len(ApuntadoresBloqueUsoArchivo); i++ {
+				//fmt.Println(ApuntadoresBloqueUsoArchivo[i])
+				if bitmapBloques[ApuntadoresBloqueUsoArchivo[i]] == '1' {
+					recorrerArbolFileReportePorBitmap(file, sb, int64(ApuntadoresBloqueUsoArchivo[i]-1), int64(i), NombreArchivo, 4, true)
+				}
+			}
+
+			cadenaReporteTreeComplete += subCadenaReporteTreeComplete
+			cadenaReporteTreeComplete += "}"
+
+			/*
+						ApuntadoresBloqueUsoArchivo = nil
+				ApuntadoresInodosUsoArchivo = nil
+				ApuntadoresInodosUsoArchivo = append(ApuntadoresInodosUsoArchivo, inodoPrincipal+1) //Se agrega el inodo que esta siempre en uso
+				fmt.Println("Inodo Principal: ", inodoPrincipal)
+				numEstructuraTreeComplete = inodoPrincipal
+				recorrerArbolRecursivoRetornarApuntadoresArchivo(file, sb, 3)
+			*/
+
+			//******************************************************************
+			//Se escribe la cadena en el archivo .svg que usara Graphviz
+			//******************************************************************
+			nombreGV, nombreExtension := crearArchivoParaReporte(path, cadenaReporteTreeComplete)
+			//******************************************************************
+			//Aca se genera el la imagen, pdf segun sea ingresada
+			//******************************************************************
+			//cmd := exec.Command("dot", "-Tps", "/home/javier/Imágenes/graph1.gv", "-o", "/home/javier/Imágenes/gra.pdf")
+			ruta, nombreArchivo := filepath.Split(path)
+			nombreCompleto := ruta + nombreArchivo
+
+			var cmd *exec.Cmd
+			if nombreExtension == ".pdf" {
+				cmd = exec.Command("dot", "-Tps", ruta+nombreGV, "-o", nombreCompleto)
+			} else {
+				cmd = exec.Command("dot", "-Tpng", ruta+nombreGV, "-o", nombreCompleto)
+			}
+			cmdOutput := &bytes.Buffer{}
+			cmd.Stdout = cmdOutput
+			err := cmd.Run()
+			if err != nil {
+				os.Stderr.WriteString(err.Error())
+			}
+			fmt.Print(string(cmdOutput.Bytes()))
+			fmt.Println(green + "[EXITO]" + reset + "Reporte " + cyan + "TREE_FILE" + reset + " creado con exito")
+		}
+	}
+}
+
+//ReporteTreeDirectorio =
+func ReporteTreeDirectorio(id, path string) {
+	PathID, NombreParticion, ExisteID := existeID(id) //Path, nombre particion, bool si existe
+	//var cadenaReporteTreeComplete string = ""
+	var start int64
+
+	if ExisteID == true {
+		mbr := leerMBR(PathID)
+		var nombreAByte16 [16]byte
+		copy(nombreAByte16[:], NombreParticion)
+		if mbr.MbrPartition1.PartName == nombreAByte16 {
+			start = mbr.MbrPartition1.PartStart
+		} else if mbr.MbrPartition2.PartName == nombreAByte16 {
+			start = mbr.MbrPartition1.PartStart
+		} else if mbr.MbrPartition3.PartName == nombreAByte16 {
+			start = mbr.MbrPartition1.PartStart
+		} else if mbr.MbrPartition4.PartName == nombreAByte16 {
+			start = mbr.MbrPartition1.PartStart
+		}
+		sb := leerSB(PathID, start)
+
+		//Se abre el archivo para su uso
+		file, err := os.OpenFile(PathID, os.O_RDWR, 0755)
+		defer file.Close()
+		if err != nil {
+			fmt.Println(red + "[ERROR]" + reset + "No se ha podido abrir el archivo")
+		}
+
+		//**********************************************************************
+		//Se preparan los bitmap para saber como moverse en el archivo
+		//**********************************************************************
+		bitmapArbolVirtualDirectorio := retornarBitmap(file, sb.SbApBitmapArbolDirectorio, sb)
+		bitmapDetalleDirectorio := retornarBitmap(file, sb.SbApBitmapDetalleDirectorio, sb)
+
+		//**********************************************************************
+		//Se preparan los tamaños de los archivos
+		//**********************************************************************
+		var cadenaReporteTreeComplete string
+		if bitmapArbolVirtualDirectorio[0] == '1' {
+			cadenaReporteTreeComplete = "digraph MBR {\nnode [shape=plaintext]\nrankdir=LR;\n"
+			subCadenaReporteTreeComplete = ""
+			numEstructuraTreeComplete = 0
+			numEstructuraTreeCompleteMov = 0
+			numEstructuraTreeCompleteAux = 0
+			//recorrerArbolRecursivoReporte(file, sb, 1)
+			for i := 0; i < len(bitmapArbolVirtualDirectorio); i++ {
+				if bitmapArbolVirtualDirectorio[i] == '1' {
+					recorrerArbolDirectorioReportePorBitmap(file, sb, int64(i), 1)
+				}
+			}
+			for i := 0; i < len(bitmapDetalleDirectorio); i++ {
+				if bitmapDetalleDirectorio[i] == '1' {
+					recorrerArbolDirectorioReportePorBitmap(file, sb, int64(i), 2)
+				}
+			}
+			cadenaReporteTreeComplete += subCadenaReporteTreeComplete
+			cadenaReporteTreeComplete += "}"
+			//******************************************************************
+			//Se escribe la cadena en el archivo .svg que usara Graphviz
+			//******************************************************************
+			nombreGV, nombreExtension := crearArchivoParaReporte(path, cadenaReporteTreeComplete)
+			//******************************************************************
+			//Aca se genera el la imagen, pdf segun sea ingresada
+			//******************************************************************
+			//cmd := exec.Command("dot", "-Tps", "/home/javier/Imágenes/graph1.gv", "-o", "/home/javier/Imágenes/gra.pdf")
+			ruta, nombreArchivo := filepath.Split(path)
+			nombreCompleto := ruta + nombreArchivo
+
+			var cmd *exec.Cmd
+			if nombreExtension == ".pdf" {
+				cmd = exec.Command("dot", "-Tps", ruta+nombreGV, "-o", nombreCompleto)
+			} else {
+				cmd = exec.Command("dot", "-Tpng", ruta+nombreGV, "-o", nombreCompleto)
+			}
+			cmdOutput := &bytes.Buffer{}
+			cmd.Stdout = cmdOutput
+			err := cmd.Run()
+			if err != nil {
+				os.Stderr.WriteString(err.Error())
+			}
+			fmt.Print(string(cmdOutput.Bytes()))
+			fmt.Println(green + "[EXITO]" + reset + "Reporte " + cyan + "TREE_DIRECTORIO" + reset + " creado con exito")
 		}
 	}
 	//leerBitmapResumen(path, )
@@ -4849,6 +5755,7 @@ func ReporteDirectorio(id, path string) {
 				os.Stderr.WriteString(err.Error())
 			}
 			fmt.Print(string(cmdOutput.Bytes()))
+			fmt.Println(green + "[EXITO]" + reset + "Reporte " + cyan + "DIRECTORIO" + reset + " creado con exito")
 		}
 	}
 	//leerBitmapResumen(path, )
@@ -4895,7 +5802,7 @@ func recorrerArbolRecursivoReporte(file *os.File, sb SUPERBOOT, movimiento int64
 			if i < 6 && avd.AvdApArraySubdirectorios[i] != 0 {
 				numEstructuraTreeCompleteMov = numEstructuraTreeCompleteAux
 				//numEstructuraTreeCompleteMov = numEstructuraTreeComplete
-				fmt.Println("[TIPO1]pos ", i, ":", avd.AvdNombreDirectorio)
+				//fmt.Println("[TIPO1]pos ", i, ":", avd.AvdNombreDirectorio)
 				subCadenaReporteTreeComplete += "AVD" + strconv.FormatInt(numEstructuraTreeCompleteMov+1, 10) + ":" + strconv.Itoa(i+1) + " -> "
 				numEstructuraTreeComplete = avd.AvdApArraySubdirectorios[i]
 				movimiento = avd.AvdApArraySubdirectorios[i]
@@ -4904,7 +5811,7 @@ func recorrerArbolRecursivoReporte(file *os.File, sb SUPERBOOT, movimiento int64
 				//recorrerArbolRecursivoReporte(file, sb, 1)
 				recorrerArbolRecursivoReporte(file, sb, movimiento, 1)
 			} else if i == 6 && avd.AvdApDetalleDirectorio != 0 {
-				fmt.Println("[TIPO1]pos det", i, ":", avd.AvdApDetalleDirectorio)
+				//fmt.Println("[TIPO1]pos det", i, ":", avd.AvdApDetalleDirectorio)
 				subCadenaReporteTreeComplete += "AVD" + strconv.FormatInt(numEstructuraTreeCompleteMov+1, 10) + ":" + strconv.Itoa(i+1) + " -> "
 				numEstructuraTreeComplete = avd.AvdApDetalleDirectorio
 				subCadenaReporteTreeComplete += "DD" + strconv.FormatInt(numEstructuraTreeComplete, 10) + "\n"
@@ -4912,7 +5819,7 @@ func recorrerArbolRecursivoReporte(file *os.File, sb SUPERBOOT, movimiento int64
 				//recorrerArbolRecursivoReporte(file, sb, 2)
 				recorrerArbolRecursivoReporte(file, sb, movimiento, 2)
 			} else if i == 7 && avd.AvdApArbolVirtualDirectorio != 0 {
-				fmt.Println("[TIPO1]pos ind", i, ":", avd.AvdApArbolVirtualDirectorio)
+				//fmt.Println("[TIPO1]pos ind", i, ":", avd.AvdApArbolVirtualDirectorio)
 				subCadenaReporteTreeComplete += "AVD" + strconv.FormatInt(numEstructuraTreeComplete+1, 10) + ":" + strconv.Itoa(i+1) + " -> "
 				numEstructuraTreeComplete = avd.AvdApArbolVirtualDirectorio
 				subCadenaReporteTreeComplete += "AVD:" + strconv.FormatInt(numEstructuraTreeComplete, 10) + "\n"
@@ -4942,7 +5849,7 @@ func recorrerArbolRecursivoReporte(file *os.File, sb SUPERBOOT, movimiento int64
 		subCadenaReporteTreeComplete += "</TABLE>\n>];\n\n"
 		for i := 0; i < 6; i++ {
 			if i < 5 && dd.DdArrayFiles[i].DdFileApInodo != 0 {
-				fmt.Println("[TIPO2]pos ", i, ":", dd.DdArrayFiles[i].DdFileApInodo)
+				//fmt.Println("[TIPO2]pos ", i, ":", dd.DdArrayFiles[i].DdFileApInodo)
 				subCadenaReporteTreeComplete += "DD" + strconv.FormatInt(numEstructuraTreeComplete+1, 10) + ":" + strconv.Itoa(i+1) + " -> "
 				numEstructuraTreeComplete = dd.DdArrayFiles[i].DdFileApInodo
 				subCadenaReporteTreeComplete += "TI" + strconv.FormatInt(numEstructuraTreeComplete, 10) + "\n"
@@ -4951,7 +5858,7 @@ func recorrerArbolRecursivoReporte(file *os.File, sb SUPERBOOT, movimiento int64
 				//recorrerArbolRecursivoReporte(file, sb, 3)
 				recorrerArbolRecursivoReporte(file, sb, 0, 3)
 			} else if i == 5 && dd.DdApDetalleDirectorio != 0 {
-				fmt.Println("[TIPO2]pos ", i, ":", dd.DdApDetalleDirectorio)
+				//fmt.Println("[TIPO2]pos ", i, ":", dd.DdApDetalleDirectorio)
 				subCadenaReporteTreeComplete += "DD" + strconv.FormatInt(numEstructuraTreeComplete+1, 10) + ":" + strconv.Itoa(i+1) + " -> "
 				numEstructuraTreeComplete = dd.DdApDetalleDirectorio
 				subCadenaReporteTreeComplete += "DD:" + strconv.FormatInt(numEstructuraTreeComplete, 10) + "\n"
@@ -4982,7 +5889,7 @@ func recorrerArbolRecursivoReporte(file *os.File, sb SUPERBOOT, movimiento int64
 		for i := 0; i < 5; i++ {
 			if i < 4 && ti.IArrayBloques[i] != 0 {
 				numEstructuraTreeCompleteMov = ti.ICountInodo - 1
-				fmt.Println("[TIPO3]pos ", i, ",", numEstructuraTreeCompleteMov, ":", ti.IArrayBloques[i])
+				//fmt.Println("[TIPO3]pos ", i, ",", numEstructuraTreeCompleteMov, ":", ti.IArrayBloques[i])
 				subCadenaReporteTreeComplete += "TI" + strconv.FormatInt(numEstructuraTreeCompleteMov+1, 10) + ":" + strconv.Itoa(i+1) + " -> "
 				numEstructuraTreeComplete = ti.IArrayBloques[i]
 				subCadenaReporteTreeComplete += "B" + strconv.FormatInt(numEstructuraTreeComplete, 10) + "\n"
@@ -4990,7 +5897,7 @@ func recorrerArbolRecursivoReporte(file *os.File, sb SUPERBOOT, movimiento int64
 				//recorrerArbolRecursivoReporte(file, sb, 4)
 				recorrerArbolRecursivoReporte(file, sb, movimiento, 4)
 			} else if i == 4 && ti.IApIndirecto != 0 {
-				fmt.Println("[TIPO3]pos ind", i, ":", ti.IApIndirecto)
+				//fmt.Println("[TIPO3]pos ind", i, ":", ti.IApIndirecto)
 				numEstructuraTreeCompleteMov = ti.ICountInodo
 				subCadenaReporteTreeComplete += "TI" + strconv.FormatInt(numEstructuraTreeCompleteMov, 10) + ":" + strconv.Itoa(i+1) + " -> "
 				numEstructuraTreeComplete = ti.IApIndirecto
@@ -5013,7 +5920,7 @@ func recorrerArbolRecursivoReporte(file *os.File, sb SUPERBOOT, movimiento int64
 		}
 		subCadenaReporteTreeComplete += "<TR>\n<TD COLSPAN='2'>" + contenidoBloque + "</TD>\n</TR>\n"
 		subCadenaReporteTreeComplete += "</TABLE>\n>];\n\n"
-		fmt.Println("[TIPO4]pos: ", string(bd.DbDato[:]))
+		//fmt.Println("[TIPO4]pos: ", string(bd.DbDato[:]))
 	}
 }
 
@@ -5097,17 +6004,17 @@ func recorrerArbolRecursivo(file *os.File, sb SUPERBOOT, tipoArchivo int) {
 
 		for i := 0; i < 8; i++ {
 			if i < 6 && avd.AvdApArraySubdirectorios[i] != 0 {
-				fmt.Println("[TIPO1]pos ", i, ":", avd.AvdNombreDirectorio)
+				//fmt.Println("[TIPO1]pos ", i, ":", avd.AvdNombreDirectorio)
 				numEstructuraTreeComplete = avd.AvdApArraySubdirectorios[i]
 				numEstructuraTreeComplete--
 				recorrerArbolRecursivo(file, sb, 1)
 			} else if i == 6 && avd.AvdApDetalleDirectorio != 0 {
-				fmt.Println("[TIPO1]pos ", i, ":", avd.AvdApDetalleDirectorio)
+				//fmt.Println("[TIPO1]pos ", i, ":", avd.AvdApDetalleDirectorio)
 				numEstructuraTreeComplete = avd.AvdApDetalleDirectorio
 				numEstructuraTreeComplete--
 				recorrerArbolRecursivo(file, sb, 2)
 			} else if i == 7 && avd.AvdApArbolVirtualDirectorio != 0 {
-				fmt.Println("[TIPO1]pos ", i, ":", avd.AvdApArbolVirtualDirectorio)
+				//fmt.Println("[TIPO1]pos ", i, ":", avd.AvdApArbolVirtualDirectorio)
 				numEstructuraTreeComplete = avd.AvdApArbolVirtualDirectorio
 				numEstructuraTreeComplete--
 				recorrerArbolRecursivo(file, sb, 1)
@@ -5117,12 +6024,12 @@ func recorrerArbolRecursivo(file *os.File, sb SUPERBOOT, tipoArchivo int) {
 		dd := leerDD(file, sb.SbApDetalleDirectorio+(sb.SbSizeStructDetalleDirectorio*numEstructuraTreeComplete))
 		for i := 0; i < 6; i++ {
 			if i < 5 && dd.DdArrayFiles[i].DdFileApInodo != 0 {
-				fmt.Println("[TIPO2]pos ", i, ":", dd.DdArrayFiles[i].DdFileApInodo)
+				//fmt.Println("[TIPO2]pos ", i, ":", dd.DdArrayFiles[i].DdFileApInodo)
 				numEstructuraTreeComplete = dd.DdArrayFiles[i].DdFileApInodo
 				numEstructuraTreeComplete--
 				recorrerArbolRecursivo(file, sb, 3)
 			} else if i == 5 && dd.DdApDetalleDirectorio != 0 {
-				fmt.Println("[TIPO2]pos ", i, ":", dd.DdApDetalleDirectorio)
+				//fmt.Println("[TIPO2]pos ", i, ":", dd.DdApDetalleDirectorio)
 				numEstructuraTreeComplete = dd.DdApDetalleDirectorio
 				numEstructuraTreeComplete--
 				recorrerArbolRecursivo(file, sb, 2)
@@ -5133,21 +6040,21 @@ func recorrerArbolRecursivo(file *os.File, sb SUPERBOOT, tipoArchivo int) {
 		for i := 0; i < 5; i++ {
 			if i < 4 && ti.IArrayBloques[i] != 0 {
 				numEstructuraTreeCompleteMov = ti.ICountInodo - 1
-				fmt.Println("[TIPO3]pos ", i, ",", numEstructuraTreeCompleteMov, ":", ti.IArrayBloques[i])
+				//fmt.Println("[TIPO3]pos ", i, ",", numEstructuraTreeCompleteMov, ":", ti.IArrayBloques[i])
 				//fmt.Println("[TIPO3]pos ", i, ",", numEstructuraTreeComplete, ":", ti.IArrayBloques[i])
 				numEstructuraTreeComplete = ti.IArrayBloques[i]
 				numEstructuraTreeComplete--
 				recorrerArbolRecursivo(file, sb, 4)
 			} else if i == 4 && ti.IApIndirecto != 0 {
-				fmt.Println("[TIPO3]pos ind ", i, ":", ti.IApIndirecto)
+				//fmt.Println("[TIPO3]pos ind ", i, ":", ti.IApIndirecto)
 				numEstructuraTreeComplete = ti.IApIndirecto
 				numEstructuraTreeComplete--
 				recorrerArbolRecursivo(file, sb, 3)
 			}
 		}
 	} else if tipoArchivo == 4 { //CUANDO ES TIPO BLOQUE DE DATOS
-		bd := leerBLOQUEDATOS(file, sb.SbApBloques+(sb.SbSizeStructBloque*numEstructuraTreeComplete))
-		fmt.Println("[TIPO4]pos: ", string(bd.DbDato[:]))
+		//bd := leerBLOQUEDATOS(file, sb.SbApBloques+(sb.SbSizeStructBloque*numEstructuraTreeComplete))
+		//fmt.Println("[TIPO4]pos: ", string(bd.DbDato[:]))
 	}
 }
 
@@ -5161,12 +6068,12 @@ func recorrerArbolRecursivoRetornarUsersTxt(file *os.File, sb SUPERBOOT, tipoArc
 		for i := 0; i < 5; i++ {
 			if i < 4 && ti.IArrayBloques[i] != 0 {
 				numEstructuraTreeCompleteMov = ti.ICountInodo - 1
-				fmt.Println("[TIPO3]pos ", i, ",", numEstructuraTreeCompleteMov, ":", ti.IArrayBloques[i])
+				//fmt.Println("[TIPO3]pos ", i, ",", numEstructuraTreeCompleteMov, ":", ti.IArrayBloques[i])
 				numEstructuraTreeComplete = ti.IArrayBloques[i]
 				numEstructuraTreeComplete--
 				recorrerArbolRecursivoRetornarUsersTxt(file, sb, 4)
 			} else if i == 4 && ti.IApIndirecto != 0 {
-				fmt.Println("[TIPO3]pos ind", i, ":", ti.IApIndirecto)
+				//fmt.Println("[TIPO3]pos ind", i, ":", ti.IApIndirecto)
 				numEstructuraTreeComplete = ti.IApIndirecto
 				numEstructuraTreeComplete--
 				recorrerArbolRecursivoRetornarUsersTxt(file, sb, 3)
@@ -5180,7 +6087,7 @@ func recorrerArbolRecursivoRetornarUsersTxt(file *os.File, sb SUPERBOOT, tipoArc
 			}
 		}
 		//CadenaRetornoUserTXT += string(bd.DbDato[:])
-		fmt.Println("[TIPO4]pos: ", string(bd.DbDato[:]))
+		//fmt.Println("[TIPO4]pos: ", string(bd.DbDato[:]))
 	}
 }
 
@@ -5213,7 +6120,7 @@ func modificarUSERTXT(file *os.File, sb SUPERBOOT, name, usr, pwd string, tamCad
 	} else if tipo == 2 {
 		CadenaRetornoUserTXT += "1,U," + name + "," + usr + "," + pwd + "\\n"
 	}
-	fmt.Println(cyan + "Cadena USERS.TXT Nueva: " + reset + CadenaRetornoUserTXT)
+	//fmt.Println(cyan + "Cadena USERS.TXT Nueva: " + reset + CadenaRetornoUserTXT)
 	tamCadena = len(CadenaRetornoUserTXT)
 	//********************************************************
 	//Se reinician los arreglos de apuntadores, los cuales se
@@ -5225,9 +6132,9 @@ func modificarUSERTXT(file *os.File, sb SUPERBOOT, name, usr, pwd string, tamCad
 	ApuntadoresInodosUsoUSERTXT = append(ApuntadoresInodosUsoUSERTXT, 1) //Se agrega el 1 ya que este siempre esta
 	numEstructuraTreeComplete = 0
 	recorrerArbolRecursivoRetornarApuntadoresUSERTXT(file, sb, 3)
-	fmt.Println(tamCadena)
-	fmt.Println(bitmapTablaInodos)
-	fmt.Println(bitmapBloques)
+	//fmt.Println(tamCadena)
+	//fmt.Println(bitmapTablaInodos)
+	//fmt.Println(bitmapBloques)
 	//********************************************************
 	//Se calculan cuantos bloques se usaran y se valida si hay
 	//espacio suficiente en el bitmap
@@ -5238,13 +6145,13 @@ func modificarUSERTXT(file *os.File, sb SUPERBOOT, name, usr, pwd string, tamCad
 		totalDeBloques++
 	}
 	totalDeBloquesNuevos := totalDeBloques - len(ApuntadoresBloqueUsoUSERTXT)
-	fmt.Println("Bloques nuevos: ", totalDeBloquesNuevos)
+	//fmt.Println("Bloques nuevos: ", totalDeBloquesNuevos)
 	//var cuantosBloquesLibres int64
 	//var posicionBloquesLibres []int64
-	fmt.Println("Tamano Bitmap Bloques: ", len(bitmapBloques))
-	fmt.Println("Arreglo posiciones Uso: ", ApuntadoresBloqueUsoUSERTXT)
-	fmt.Println("Apuntadores bloques en uso: ", ApuntadoresBloqueUsoUSERTXT[:])
-	fmt.Println("Apuntadores indodos en uso: ", ApuntadoresInodosUsoUSERTXT[:])
+	//fmt.Println("Tamano Bitmap Bloques: ", len(bitmapBloques))
+	//fmt.Println("Arreglo posiciones Uso: ", ApuntadoresBloqueUsoUSERTXT)
+	//fmt.Println("Apuntadores bloques en uso: ", ApuntadoresBloqueUsoUSERTXT[:])
+	//fmt.Println("Apuntadores indodos en uso: ", ApuntadoresInodosUsoUSERTXT[:])
 
 	var todasLasPosicionesAEscribirBloques []int64
 	todasLasPosicionesAEscribirBloques = append(todasLasPosicionesAEscribirBloques[:], ApuntadoresBloqueUsoUSERTXT[:]...)
@@ -5262,8 +6169,8 @@ func modificarUSERTXT(file *os.File, sb SUPERBOOT, name, usr, pwd string, tamCad
 				contadorBloquesLibres--
 			}
 		}
-		fmt.Println(magenta + "TODAS LAS POSICIONES DE BLOQUES: " + reset)
-		fmt.Println(todasLasPosicionesAEscribirBloques)
+		//fmt.Println(magenta + "TODAS LAS POSICIONES DE BLOQUES: " + reset)
+		//fmt.Println(todasLasPosicionesAEscribirBloques)
 	}
 
 	//********************************************************
@@ -5277,7 +6184,7 @@ func modificarUSERTXT(file *os.File, sb SUPERBOOT, name, usr, pwd string, tamCad
 		totalDeInodos++
 	}
 	totalDeInodosNuevos := totalDeInodos - len(ApuntadoresInodosUsoUSERTXT)
-	fmt.Println("Total de inodos nuevos: ", totalDeInodosNuevos)
+	//fmt.Println("Total de inodos nuevos: ", totalDeInodosNuevos)
 
 	var todasLasPosicionesAEscribirInodos []int64
 	todasLasPosicionesAEscribirInodos = append(todasLasPosicionesAEscribirInodos[:], ApuntadoresInodosUsoUSERTXT[:]...)
@@ -5295,15 +6202,15 @@ func modificarUSERTXT(file *os.File, sb SUPERBOOT, name, usr, pwd string, tamCad
 				contadorInodosLibres--
 			}
 		}
-		fmt.Println(magenta + "TODAS LAS POSICIONES DE INODOS: " + reset)
-		fmt.Println(todasLasPosicionesAEscribirInodos)
+		//fmt.Println(magenta + "TODAS LAS POSICIONES DE INODOS: " + reset)
+		//fmt.Println(todasLasPosicionesAEscribirInodos)
 	}
 
 	//ti := leerTABLAINODO(file, sb.SbApTablaInodo+(sb.SbSizeStructInodo*numEstructuraTreeComplete))
 	//********************************************************
 	//Se escriben las nuevas estructuras
 	//********************************************************
-	fmt.Println("T: ", totalDeBloques)
+	//fmt.Println("T: ", totalDeBloques)
 	contPosBloque := totalDeBloques
 	numPosBloque := 0
 	for i := 0; i < len(todasLasPosicionesAEscribirInodos); i++ {
@@ -5348,8 +6255,8 @@ func modificarUSERTXT(file *os.File, sb SUPERBOOT, name, usr, pwd string, tamCad
 		copy(contenidoAByte25[:], cadenaUserTxtSeparada[i])
 		nuevoBD.DbDato = contenidoAByte25
 		//CadenaRetornoUserTXT
-		fmt.Println(string(contenidoAByte25[:]))
-		fmt.Println(todasLasPosicionesAEscribirBloques[i])
+		//fmt.Println(string(contenidoAByte25[:]))
+		//fmt.Println(todasLasPosicionesAEscribirBloques[i])
 		file.Seek(sb.SbApBloques+(sb.SbSizeStructBloque*(todasLasPosicionesAEscribirBloques[i]-1)), 0)
 		var valorBinarioBloque bytes.Buffer
 		binary.Write(&valorBinarioBloque, binary.BigEndian, &nuevoBD)
@@ -5363,7 +6270,7 @@ func modificarUSERTXT(file *os.File, sb SUPERBOOT, name, usr, pwd string, tamCad
 	for i := 0; i < len(todasLasPosicionesAEscribirInodos); i++ {
 		nuevoBitmapTablaInodos[todasLasPosicionesAEscribirInodos[i]-1] = '1'
 	}
-	fmt.Println(red, nuevoBitmapTablaInodos, reset)
+	//fmt.Println(red, nuevoBitmapTablaInodos, reset)
 	reescribirBitmap(file, sb.SbApBitmapTablaInodo, nuevoBitmapTablaInodos)
 	nuevoBitmapBloques := bitmapBloques
 	for i := 0; i < len(todasLasPosicionesAEscribirBloques); i++ {
@@ -5444,12 +6351,12 @@ func recorrerArbolRecursivoReportePorBitmap(file *os.File, sb SUPERBOOT, posicio
 				subCadenaReporteTreeComplete += "AVD" + strconv.FormatInt(posicion+1, 10) + ":" + strconv.Itoa(i+1) + " -> "
 				subCadenaReporteTreeComplete += "AVD" + strconv.FormatInt(avd.AvdApArraySubdirectorios[i], 10) + "\n"
 			} else if i == 6 && avd.AvdApDetalleDirectorio != 0 {
-				fmt.Println("[TIPO1]pos det", i, ":", avd.AvdApDetalleDirectorio)
+				//fmt.Println("[TIPO1]pos det", i, ":", avd.AvdApDetalleDirectorio)
 				subCadenaReporteTreeComplete += "AVD" + strconv.FormatInt(posicion+1, 10) + ":" + strconv.Itoa(i+1) + " -> "
 				subCadenaReporteTreeComplete += "DD" + strconv.FormatInt(avd.AvdApDetalleDirectorio, 10) + "\n"
 				numEstructuraTreeComplete = avd.AvdApDetalleDirectorio
 			} else if i == 7 && avd.AvdApArbolVirtualDirectorio != 0 {
-				fmt.Println("[TIPO1]pos ind", i, ":", avd.AvdApArbolVirtualDirectorio)
+				//fmt.Println("[TIPO1]pos ind", i, ":", avd.AvdApArbolVirtualDirectorio)
 				subCadenaReporteTreeComplete += "AVD" + strconv.FormatInt(posicion+1, 10) + ":" + strconv.Itoa(i+1) + " -> "
 				numEstructuraTreeComplete = avd.AvdApArbolVirtualDirectorio
 				subCadenaReporteTreeComplete += "AVD" + strconv.FormatInt(avd.AvdApArbolVirtualDirectorio, 10) + "\n"
@@ -5481,7 +6388,7 @@ func recorrerArbolRecursivoReportePorBitmap(file *os.File, sb SUPERBOOT, posicio
 				subCadenaReporteTreeComplete += "DD" + strconv.FormatInt(posicion+1, 10) + ":" + strconv.Itoa(i+1) + " -> "
 				subCadenaReporteTreeComplete += "TI" + strconv.FormatInt(dd.DdArrayFiles[i].DdFileApInodo, 10) + "\n"
 			} else if i == 5 && dd.DdApDetalleDirectorio != 0 {
-				fmt.Println("[TIPO2]pos ", i, ":", dd.DdApDetalleDirectorio)
+				//fmt.Println("[TIPO2]pos ", i, ":", dd.DdApDetalleDirectorio)
 				subCadenaReporteTreeComplete += "DD" + strconv.FormatInt(posicion+1, 10) + ":" + strconv.Itoa(i+1) + " -> "
 				subCadenaReporteTreeComplete += "DD" + strconv.FormatInt(dd.DdApDetalleDirectorio, 10) + "\n"
 			}
@@ -5578,11 +6485,337 @@ func recorrerDirectoriosReportePorBitmap(file *os.File, sb SUPERBOOT, posicion i
 				subCadenaReporteTreeComplete += "AVD" + strconv.FormatInt(posicion+1, 10) + ":" + strconv.Itoa(i+1) + " -> "
 				subCadenaReporteTreeComplete += "AVD" + strconv.FormatInt(avd.AvdApArraySubdirectorios[i], 10) + "\n"
 			} else if i == 7 && avd.AvdApArbolVirtualDirectorio != 0 {
-				fmt.Println("[TIPO1]pos ind", i, ":", avd.AvdApArbolVirtualDirectorio)
+				//fmt.Println("[TIPO1]pos ind", i, ":", avd.AvdApArbolVirtualDirectorio)
 				subCadenaReporteTreeComplete += "AVD" + strconv.FormatInt(posicion+1, 10) + ":" + strconv.Itoa(i+1) + " -> "
 				numEstructuraTreeComplete = avd.AvdApArbolVirtualDirectorio
 				subCadenaReporteTreeComplete += "AVD" + strconv.FormatInt(avd.AvdApArbolVirtualDirectorio, 10) + "\n"
 			}
+		}
+	}
+}
+
+func recorrerArbolDirectorioReportePorBitmap(file *os.File, sb SUPERBOOT, posicion int64, tipoArchivo int) {
+	if tipoArchivo == 1 {
+		var cadenaTemporal string
+		avd := leerAVD(file, sb.SbApArbolDirectorio+(sb.SbSizeStructArbolDirectorio*posicion))
+		cadenaTemporal += "AVD" + strconv.FormatInt(posicion+1, 10) + "[label=<\n<TABLE BORDER='0' CELLBORDER='1' CELLSPACING='0'>\n"
+		var nombreDirectorio string
+		for i1, valor1 := range avd.AvdNombreDirectorio {
+			if avd.AvdNombreDirectorio[i1] != 0 {
+				nombreDirectorio += string(valor1)
+			}
+		}
+		cadenaTemporal += "<TR port='0'>\n<TD BGCOLOR='#99ccff' COLSPAN='2'><font color='black'>" + nombreDirectorio + "</font></TD>\n</TR>\n"
+		cadenaTemporal += "<TR>\n<TD BGCOLOR='#99ccff'>Fecha Creacion</TD><TD>" + string(avd.AvdFechaCreacion[:]) + "</TD>\n</TR>\n"
+		cadenaTemporal += "<TR>\n<TD BGCOLOR='#99ccff'>APD 1</TD><TD port='1'>" + strconv.FormatInt(avd.AvdApArraySubdirectorios[0], 10) + "</TD>\n</TR>\n"
+		cadenaTemporal += "<TR>\n<TD BGCOLOR='#99ccff'>APD 2</TD><TD port='2'>" + strconv.FormatInt(avd.AvdApArraySubdirectorios[1], 10) + "</TD>\n</TR>\n"
+		cadenaTemporal += "<TR>\n<TD BGCOLOR='#99ccff'>APD 3</TD><TD port='3'>" + strconv.FormatInt(avd.AvdApArraySubdirectorios[2], 10) + "</TD>\n</TR>\n"
+		cadenaTemporal += "<TR>\n<TD BGCOLOR='#99ccff'>APD 4</TD><TD port='4'>" + strconv.FormatInt(avd.AvdApArraySubdirectorios[3], 10) + "</TD>\n</TR>\n"
+		cadenaTemporal += "<TR>\n<TD BGCOLOR='#99ccff'>APD 5</TD><TD port='5'>" + strconv.FormatInt(avd.AvdApArraySubdirectorios[4], 10) + "</TD>\n</TR>\n"
+		cadenaTemporal += "<TR>\n<TD BGCOLOR='#99ccff'>APD 6</TD><TD port='6'>" + strconv.FormatInt(avd.AvdApArraySubdirectorios[5], 10) + "</TD>\n</TR>\n"
+		cadenaTemporal += "<TR>\n<TD BGCOLOR='#99ccff'>Detalle Directorio</TD><TD port='7'>" + strconv.FormatInt(avd.AvdApDetalleDirectorio, 10) + "</TD>\n</TR>\n"
+		cadenaTemporal += "<TR>\n<TD BGCOLOR='#99ccff'>APDI 1</TD><TD port='8'>" + strconv.FormatInt(avd.AvdApArbolVirtualDirectorio, 10) + "</TD>\n</TR>\n"
+		var nombreGroup string
+		for i, valor := range avd.AvdGid {
+			if avd.AvdGid[i] != 0 {
+				nombreGroup += string(valor)
+			}
+		}
+		cadenaTemporal += "<TR>\n<TD BGCOLOR='#99ccff'>GRP</TD><TD>" + nombreGroup + "</TD>\n</TR>\n"
+		cadenaTemporal += "<TR>\n<TD BGCOLOR='#99ccff'>PERM</TD><TD>" + string(avd.AvdPerm[:]) + "</TD>\n</TR>\n"
+		var nombreProper string
+		for i1, valor1 := range avd.AvdProper {
+			if avd.AvdProper[i1] != 0 {
+				nombreProper += string(valor1)
+			}
+		}
+		cadenaTemporal += "<TR>\n<TD BGCOLOR='#99ccff'>PROPER</TD><TD>" + nombreProper + "</TD>\n</TR>\n"
+		cadenaTemporal += "</TABLE>\n>];\n\n"
+		for i := 0; i < 8; i++ {
+			if i < 6 && avd.AvdApArraySubdirectorios[i] != 0 {
+				//subCadenaReporteTreeComplete += "AVD" + strconv.FormatInt(posicion+1, 10) + ":" + strconv.Itoa(i+1) + " -> "
+				//subCadenaReporteTreeComplete += "AVD" + strconv.FormatInt(avd.AvdApArraySubdirectorios[i], 10) + "\n"
+			} else if i == 6 && avd.AvdApDetalleDirectorio != 0 {
+				//fmt.Println("[TIPO1]pos det", i, ":", avd.AvdApDetalleDirectorio)
+				ddTemporal := leerDD(file, sb.SbApDetalleDirectorio+(sb.SbSizeStructDetalleDirectorio*(avd.AvdApDetalleDirectorio-1)))
+				siTieneArchivos := false
+				for k := 0; k < 5; k++ {
+					if ddTemporal.DdArrayFiles[k].DdFileApInodo != 0 {
+						siTieneArchivos = true
+						break
+					}
+				}
+				if siTieneArchivos == true {
+					subCadenaReporteTreeComplete += cadenaTemporal
+					subCadenaReporteTreeComplete += "AVD" + strconv.FormatInt(posicion+1, 10) + ":" + strconv.Itoa(i+1) + " -> "
+					subCadenaReporteTreeComplete += "DD" + strconv.FormatInt(avd.AvdApDetalleDirectorio, 10) + "\n"
+				}
+				numEstructuraTreeComplete = avd.AvdApDetalleDirectorio
+			} else if i == 7 && avd.AvdApArbolVirtualDirectorio != 0 {
+				//fmt.Println("[TIPO1]pos ind", i, ":", avd.AvdApArbolVirtualDirectorio)
+				//subCadenaReporteTreeComplete += cadenaTemporal
+				//subCadenaReporteTreeComplete += "AVD" + strconv.FormatInt(posicion+1, 10) + ":" + strconv.Itoa(i+1) + " -> "
+				numEstructuraTreeComplete = avd.AvdApArbolVirtualDirectorio
+				//subCadenaReporteTreeComplete += "AVD" + strconv.FormatInt(avd.AvdApArbolVirtualDirectorio, 10) + "\n"
+			}
+		}
+	} else if tipoArchivo == 2 {
+		var cadenaTemporal string
+		dd := leerDD(file, sb.SbApDetalleDirectorio+(sb.SbSizeStructDetalleDirectorio*posicion))
+		cadenaTemporal += "\nDD" + strconv.FormatInt(posicion+1, 10) + "[label=<\n<TABLE BORDER='0' CELLBORDER='1' CELLSPACING='0'>\n"
+		cadenaTemporal += "<TR>\n<TD BGCOLOR='#a3d977'>DETALLE<br/>DIRECTORIO</TD><TD BGCOLOR='#a3d977'>" + strconv.FormatInt(posicion+1, 10) + "</TD>\n</TR>"
+		for i := 0; i < 5; i++ {
+			if dd.DdArrayFiles[i].DdFileApInodo != 0 {
+				//fmt.Println("mamarre")
+				var nombreDirectorio string
+				for i1, valor1 := range dd.DdArrayFiles[i].DdFileNombre {
+					if dd.DdArrayFiles[i].DdFileNombre[i1] != 0 {
+						nombreDirectorio += string(valor1)
+					}
+				}
+				cadenaTemporal += "<TR>\n<TD BGCOLOR='#a3d977'>" + nombreDirectorio + "</TD><TD port='" + strconv.Itoa(i+1) + "'>" + strconv.FormatInt(dd.DdArrayFiles[i].DdFileApInodo, 10) + "</TD>\n</TR>\n"
+			} else {
+				cadenaTemporal += "<TR>\n<TD BGCOLOR='#a3d977'>APD" + strconv.Itoa(i+1) + "</TD><TD port='" + strconv.Itoa(i+1) + "'>0</TD>\n</TR>\n"
+			}
+		}
+		cadenaTemporal += "<TR>\n<TD BGCOLOR='#a3d977'>API1</TD><TD port='6'>" + strconv.FormatInt(dd.DdApDetalleDirectorio, 10) + "</TD>\n</TR>\n"
+		cadenaTemporal += "</TABLE>\n>];\n\n"
+		for i := 0; i < 6; i++ {
+			if i < 5 && dd.DdArrayFiles[i].DdFileApInodo != 0 {
+				subCadenaReporteTreeComplete += cadenaTemporal
+			} else if i == 5 && dd.DdApDetalleDirectorio != 0 {
+				//fmt.Println("[TIPO2]pos ", i, ":", dd.DdApDetalleDirectorio)
+				subCadenaReporteTreeComplete += cadenaTemporal
+				subCadenaReporteTreeComplete += "DD" + strconv.FormatInt(posicion+1, 10) + ":" + strconv.Itoa(i+1) + " -> "
+				subCadenaReporteTreeComplete += "DD" + strconv.FormatInt(dd.DdApDetalleDirectorio, 10) + "\n"
+			}
+		}
+	}
+}
+
+var apuntadorATablaInodoResumenFile int64
+
+func recorrerArbolFileReportePorBitmap(file *os.File, sb SUPERBOOT, posicion, indice int64, nombreArchivo string, tipoArchivo int, esUltimo bool) {
+	if tipoArchivo == 1 {
+		var subCadena string
+		siTieneDirectorio := false
+		avd := leerAVD(file, sb.SbApArbolDirectorio+(sb.SbSizeStructArbolDirectorio*posicion))
+		subCadenaReporteTreeComplete += "AVD" + strconv.FormatInt(posicion+1, 10) + "[label=<\n<TABLE BORDER='0' CELLBORDER='1' CELLSPACING='0'>\n"
+		var nombreDirectorio string
+		for i1, valor1 := range avd.AvdNombreDirectorio {
+			if avd.AvdNombreDirectorio[i1] != 0 {
+				nombreDirectorio += string(valor1)
+			}
+		}
+		subCadenaReporteTreeComplete += "<TR port='0'>\n<TD BGCOLOR='#99ccff' COLSPAN='2'><font color='black'>" + nombreDirectorio + "</font></TD>\n</TR>\n"
+		if esUltimo == true {
+			if indice == 0 {
+				subCadenaReporteTreeComplete += "<TR>\n<TD BGCOLOR='#99ccff'>Detalle Directorio</TD><TD port='1'>" + strconv.FormatInt(RArbol[indice+1].puntero, 10) + "</TD>\n</TR>\n"
+				if avd.AvdApDetalleDirectorio != 0 {
+					subCadena += "AVD" + strconv.FormatInt(posicion+1, 10) + ":1 -> "
+					subCadena += "DD1\n"
+					siTieneDirectorio = true
+				}
+			} else {
+				subCadenaReporteTreeComplete += "<TR>\n<TD BGCOLOR='#99ccff'>Detalle Directorio</TD><TD port='1'>" + strconv.FormatInt(avd.AvdApDetalleDirectorio, 10) + "</TD>\n</TR>\n"
+				if avd.AvdApDetalleDirectorio != 0 {
+					subCadena += "AVD" + strconv.FormatInt(posicion+1, 10) + ":1 -> "
+					subCadena += "DD1\n"
+					siTieneDirectorio = true
+				}
+			}
+		} else {
+			if indice == 0 {
+				subCadenaReporteTreeComplete += "<TR>\n<TD BGCOLOR='#99ccff'>APD</TD><TD port='1'>" + strconv.FormatInt(RArbol[indice+1].puntero, 10) + "</TD>\n</TR>\n"
+				subCadena += "AVD" + strconv.FormatInt(posicion+1, 10) + ":1 -> "
+				subCadena += "AVD" + strconv.FormatInt(RArbol[indice+1].puntero+1, 10) + "\n"
+			} else {
+				subCadenaReporteTreeComplete += "<TR>\n<TD BGCOLOR='#99ccff'>APD</TD><TD port='1'>" + strconv.FormatInt(RArbol[indice+1].puntero, 10) + "</TD>\n</TR>\n"
+				subCadena += "AVD" + strconv.FormatInt(posicion+1, 10) + ":1 -> "
+				subCadena += "AVD" + strconv.FormatInt(RArbol[indice+1].puntero+1, 10) + "\n"
+			}
+		}
+
+		subCadenaReporteTreeComplete += "</TABLE>\n>];\n\n"
+		subCadenaReporteTreeComplete += subCadena
+		if siTieneDirectorio == true {
+			recorrerArbolFileReportePorBitmap(file, sb, avd.AvdApDetalleDirectorio-1, 0, nombreArchivo, 2, false)
+		}
+	} else if tipoArchivo == 2 {
+		encontrado := false
+		dd := leerDD(file, sb.SbApDetalleDirectorio+(sb.SbSizeStructDetalleDirectorio*posicion))
+		for i := 0; i < 5; i++ {
+			if dd.DdArrayFiles[i].DdFileApInodo != 0 {
+				//fmt.Println("mamarre")
+				var nombreDirectorio string
+				for i1, valor1 := range dd.DdArrayFiles[i].DdFileNombre {
+					if dd.DdArrayFiles[i].DdFileNombre[i1] != 0 {
+						nombreDirectorio += string(valor1)
+					}
+				}
+				if nombreDirectorio == nombreArchivo {
+					subCadenaReporteTreeComplete += "\nDD1[label=<\n<TABLE BORDER='0' CELLBORDER='1' CELLSPACING='0'>\n"
+					subCadenaReporteTreeComplete += "<TR>\n<TD BGCOLOR='#a3d977'>DETALLE<br/>DIRECTORIO</TD><TD BGCOLOR='#a3d977'>" + strconv.FormatInt(posicion+1, 10) + "</TD>\n</TR>"
+					subCadenaReporteTreeComplete += "<TR>\n<TD BGCOLOR='#a3d977'>" + nombreDirectorio + "</TD><TD port='1'>" + strconv.FormatInt(dd.DdArrayFiles[i].DdFileApInodo, 10) + "</TD>\n</TR>\n"
+					subCadenaReporteTreeComplete += "</TABLE>\n>];\n\n"
+					subCadenaReporteTreeComplete += "DD1:" + strconv.Itoa(i+1) + " -> "
+					subCadenaReporteTreeComplete += "TI" + strconv.FormatInt(dd.DdArrayFiles[i].DdFileApInodo, 10) + "\n"
+					apuntadorATablaInodoResumenFile = dd.DdArrayFiles[i].DdFileApInodo
+					encontrado = true
+				}
+			} else {
+			}
+		}
+		if encontrado == false {
+			if dd.DdApDetalleDirectorio != 0 {
+				recorrerArbolFileReportePorBitmap(file, sb, dd.DdApDetalleDirectorio-1, 0, nombreArchivo, 2, false)
+			}
+		}
+	} else if tipoArchivo == 3 {
+		ti := leerTABLAINODO(file, sb.SbApTablaInodo+(sb.SbSizeStructInodo*posicion))
+		subCadenaReporteTreeComplete += "\nTI" + strconv.FormatInt(posicion+1, 10) + " [label=<\n<TABLE BORDER='0' CELLBORDER='1' CELLSPACING='0'>\n"
+		subCadenaReporteTreeComplete += "<TR>\n<TD BGCOLOR='#ffc374'>TABLA INODO</TD><TD BGCOLOR='#ffc374'>" + strconv.FormatInt(posicion+1, 10) + "</TD>\n</TR>\n"
+		subCadenaReporteTreeComplete += "<TR>\n<TD BGCOLOR='#ffc374'>Tamaño</TD><TD>" + strconv.FormatInt(ti.ISizeArchivo, 10) + "</TD>\n</TR>\n"
+		subCadenaReporteTreeComplete += "<TR>\n<TD BGCOLOR='#ffc374'>Bloques</TD><TD>" + strconv.FormatInt(ti.ICountBloquesAsignados, 10) + "</TD>\n</TR>\n"
+		subCadenaReporteTreeComplete += "<TR>\n<TD BGCOLOR='#ffc374'>APD 1</TD><TD port='1'>" + strconv.FormatInt(ti.IArrayBloques[0], 10) + "</TD>\n</TR>\n"
+		subCadenaReporteTreeComplete += "<TR>\n<TD BGCOLOR='#ffc374'>APD 2</TD><TD port='2'>" + strconv.FormatInt(ti.IArrayBloques[1], 10) + "</TD>\n</TR>\n"
+		subCadenaReporteTreeComplete += "<TR>\n<TD BGCOLOR='#ffc374'>APD 3</TD><TD port='3'>" + strconv.FormatInt(ti.IArrayBloques[2], 10) + "</TD>\n</TR>\n"
+		subCadenaReporteTreeComplete += "<TR>\n<TD BGCOLOR='#ffc374'>APD 4</TD><TD port='4'>" + strconv.FormatInt(ti.IArrayBloques[3], 10) + "</TD>\n</TR>\n"
+		subCadenaReporteTreeComplete += "<TR>\n<TD BGCOLOR='#ffc374'>API</TD><TD port='5'>" + strconv.FormatInt(ti.IApIndirecto, 10) + "</TD>\n</TR>\n"
+		subCadenaReporteTreeComplete += "</TABLE>\n>];\n\n"
+		for i := 0; i < 5; i++ {
+			if i < 4 && ti.IArrayBloques[i] != 0 {
+				subCadenaReporteTreeComplete += "TI" + strconv.FormatInt(posicion+1, 10) + ":" + strconv.Itoa(i+1) + " -> "
+				subCadenaReporteTreeComplete += "B" + strconv.FormatInt(ti.IArrayBloques[i], 10) + "\n"
+			} else if i == 4 && ti.IApIndirecto != 0 {
+				subCadenaReporteTreeComplete += "TI" + strconv.FormatInt(posicion+1, 10) + ":" + strconv.Itoa(i+1) + " -> "
+				subCadenaReporteTreeComplete += "TI" + strconv.FormatInt(ti.IApIndirecto, 10) + "\n"
+			}
+		}
+	} else if tipoArchivo == 4 {
+		bd := leerBLOQUEDATOS(file, sb.SbApBloques+(sb.SbSizeStructBloque*posicion))
+		subCadenaReporteTreeComplete += "\nB" + strconv.FormatInt(posicion+1, 10) + "[label=<\n\n<TABLE BORDER='0' CELLBORDER='1' CELLSPACING='0'>\n"
+		subCadenaReporteTreeComplete += "<TR>\n<TD BGCOLOR='#ff8f80'>BLOQUE</TD><TD BGCOLOR='#ff8f80'>" + strconv.FormatInt(posicion+1, 10) + "</TD>\n</TR>\n"
+		var contenidoBloque string
+		for i1, valor1 := range bd.DbDato {
+			if bd.DbDato[i1] != 0 {
+				contenidoBloque += string(valor1)
+			}
+		}
+		subCadenaReporteTreeComplete += "<TR>\n<TD COLSPAN='2'>" + contenidoBloque + "</TD>\n</TR>\n"
+		subCadenaReporteTreeComplete += "</TABLE>\n>];\n\n"
+	}
+}
+
+//ActualizarSUPERBOOT =
+func ActualizarSUPERBOOT(id string, start int64) {
+	if SesionActiva.usuario == "" {
+		fmt.Println(red + "[ERROR]" + reset + "No se encuentra ninguna sesion activa")
+	} else {
+		pathParticion, nameParticion, Existe := existeID(id)
+		var nombreAByte16 [16]byte
+		var start int64
+
+		if Existe == true {
+			mbr := leerMBR(pathParticion)
+			copy(nombreAByte16[:], nameParticion)
+			if mbr.MbrPartition1.PartName == nombreAByte16 {
+				start = mbr.MbrPartition1.PartStart
+			} else if mbr.MbrPartition2.PartName == nombreAByte16 {
+				start = mbr.MbrPartition2.PartStart
+			} else if mbr.MbrPartition3.PartName == nombreAByte16 {
+				start = mbr.MbrPartition3.PartStart
+			} else if mbr.MbrPartition4.PartName == nombreAByte16 {
+				start = mbr.MbrPartition4.PartStart
+			}
+			//********************************************************
+			//Se abre el Archivo
+			//********************************************************
+			file, err := os.OpenFile(pathParticion, os.O_RDWR, 0755)
+			defer file.Close()
+			if err != nil {
+				fmt.Println(red + "[ERROR]" + reset + "No se ha podido abrir el archivo")
+			}
+			//********************************************************
+			//Se retorna el contenido del SuperBoot
+			//********************************************************
+			sb := leerSB(pathParticion, start)
+
+			bitmapArbolVirtualDirectorio := retornarBitmap(file, sb.SbApBitmapArbolDirectorio, sb)
+			bitmapDetalleDirectorio := retornarBitmap(file, sb.SbApBitmapDetalleDirectorio, sb)
+			bitmapTablaInodos := retornarBitmap(file, sb.SbApBitmapTablaInodo, sb)
+			bitmapBloques := retornarBitmap(file, sb.SbApBitmapBloques, sb)
+
+			var contadorAVD int64 = 0
+			for i := 0; i < len(bitmapArbolVirtualDirectorio); i++ {
+				if bitmapArbolVirtualDirectorio[i] == '0' {
+					contadorAVD++
+				}
+			}
+			var primerLibreAVD int64 = 0
+			for i := 0; i < len(bitmapArbolVirtualDirectorio); i++ {
+				if bitmapArbolVirtualDirectorio[i] == '0' {
+					primerLibreAVD = int64(i)
+					break
+				}
+			}
+			sb.SbArbolVirtualFree = contadorAVD
+			sb.SbFirstFreeBitArbolDirectorio = primerLibreAVD
+
+			var contadorDD int64 = 0
+			for i := 0; i < len(bitmapDetalleDirectorio); i++ {
+				if bitmapDetalleDirectorio[i] == '0' {
+					contadorDD++
+				}
+			}
+			var primerLibreDD int64 = 0
+			for i := 0; i < len(bitmapDetalleDirectorio); i++ {
+				if bitmapDetalleDirectorio[i] == '0' {
+					primerLibreDD = int64(i)
+					break
+				}
+			}
+			sb.SbDetalleDirectorioFree = contadorDD
+			sb.SbFirstFreeBitDetalleDirectorio = primerLibreDD
+
+			var contadorTI int64 = 0
+			for i := 0; i < len(bitmapTablaInodos); i++ {
+				if bitmapTablaInodos[i] == '0' {
+					contadorTI++
+				}
+			}
+			var primerLibreTi int64 = 0
+			for i := 0; i < len(bitmapTablaInodos); i++ {
+				if bitmapTablaInodos[i] == '0' {
+					primerLibreTi = int64(i)
+					break
+				}
+			}
+			sb.SbInodosFree = contadorTI
+			sb.SbFirstFreeBitTablaInodo = primerLibreTi
+
+			var contadorBD int64 = 0
+			for i := 0; i < len(bitmapBloques); i++ {
+				if bitmapBloques[i] == '0' {
+					contadorBD++
+				}
+			}
+			var primerLibreBD int64 = 0
+			for i := 0; i < len(bitmapBloques); i++ {
+				if bitmapBloques[i] == '0' {
+					primerLibreBD = int64(i)
+					break
+				}
+			}
+			sb.SbBloquesFree = contadorBD
+			sb.SbFirstFreeBitBloques = primerLibreBD
+			//********************************************************
+			//Se escribe el Super Boot en el disco
+			//********************************************************
+			file.Seek(start, 0)
+			var binarioSuperBoot bytes.Buffer
+			binary.Write(&binarioSuperBoot, binary.BigEndian, &sb)
+			escribirBytes(file, binarioSuperBoot.Bytes())
 		}
 	}
 }
